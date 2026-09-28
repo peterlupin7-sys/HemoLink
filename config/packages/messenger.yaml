@@ -1,0 +1,29 @@
+framework:
+    messenger:
+        failure_transport: echecs
+
+        transports:
+            # Les SMS passent par une file en base : une coupure réseau ne fait
+            # perdre aucun message, le worker reprend là où il s'est arrêté.
+            sms:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: sms
+                retry_strategy:
+                    max_retries: 5
+                    delay: 30000
+                    multiplier: 3
+            echecs:
+                dsn: '%env(MESSENGER_TRANSPORT_DSN)%'
+                options:
+                    queue_name: echecs
+
+        routing:
+            App\Message\EnvoyerSms: sms
+
+when@test:
+    framework:
+        messenger:
+            transports:
+                sms: 'in-memory://'
+                echecs: 'in-memory://'

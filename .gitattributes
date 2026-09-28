@@ -1,0 +1,24 @@
+# Normalisation des fins de ligne : indispensable quand l'équipe travaille
+# à la fois sous Windows (XAMPP) et sous Linux.
+* text=auto eol=lf
+
+*.php    text diff=php
+*.twig   text
+*.css    text
+*.js     text
+*.sql    text
+*.md     text
+*.yaml   text
+*.yml    text
+
+*.png    binary
+*.jpg    binary
+*.pdf    binary
+*.woff2  binary
+*.docx   binary
+*.pptx   binary
+
+# Fichiers exclus des archives « Download ZIP »
+/.github        export-ignore
+/tests          export-ignore
+/.gitattributes export-ignore

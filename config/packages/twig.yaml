@@ -1,0 +1,12 @@
+twig:
+    file_name_pattern: '*.twig'
+    form_themes:
+        - 'form/champs.html.twig'
+    globals:
+        organisation: 'Centre national de transfusion sanguine du Bénin'
+        application: 'HemoLink'
+        signature: 'Chaque poche sauve une vie'
+
+when@test:
+    twig:
+        strict_variables: true

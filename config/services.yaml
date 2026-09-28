@@ -1,0 +1,39 @@
+# ---------------------------------------------------------------------------
+# Services de l'application.
+# Tout est en autowiring : on ne déclare ici que ce qui a besoin d'un réglage.
+# ---------------------------------------------------------------------------
+parameters:
+    hemolink.carte.latitude: '%env(float:CARTE_LATITUDE)%'
+    hemolink.carte.longitude: '%env(float:CARTE_LONGITUDE)%'
+    hemolink.carte.zoom: '%env(int:CARTE_ZOOM)%'
+    hemolink.sms.mode: '%env(SMS_MODE)%'
+    hemolink.sms.url: '%env(SMS_URL)%'
+    hemolink.sms.cle_api: '%env(SMS_CLE_API)%'
+    hemolink.sms.expediteur: '%env(SMS_EXPEDITEUR)%'
+    hemolink.sauvegarde.dossier: '%env(DOSSIER_SAUVEGARDE)%'
+
+services:
+    _defaults:
+        autowire: true
+        autoconfigure: true
+        bind:
+            float $carteLatitude: '%hemolink.carte.latitude%'
+            float $carteLongitude: '%hemolink.carte.longitude%'
+            int $carteZoom: '%hemolink.carte.zoom%'
+            string $smsMode: '%hemolink.sms.mode%'
+            string $smsUrl: '%hemolink.sms.url%'
+            string $smsCleApi: '%hemolink.sms.cle_api%'
+            string $smsExpediteur: '%hemolink.sms.expediteur%'
+            string $dossierSauvegarde: '%hemolink.sauvegarde.dossier%'
+            string $racineProjet: '%kernel.project_dir%'
+
+    App\:
+        resource: '../src/'
+        exclude:
+            - '../src/DependencyInjection/'
+            - '../src/Entity/'
+            - '../src/Kernel.php'
+
+    # Les variables globales des gabarits (logo, nom de l'organisation…)
+    App\Twig\AppExtension:
+        tags: ['twig.extension']
