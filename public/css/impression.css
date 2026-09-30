@@ -1,0 +1,49 @@
+/* ===========================================================================
+   Bon de retrait — mise en page papier (A4).
+   Le bon doit rester lisible imprimé en noir et blanc sur une imprimante
+   d'hôpital : pas d'aplat de couleur, du contraste, des cadres nets.
+   =========================================================================== */
+
+.page-bon { background: #fff; }
+
+.bon {
+    max-width: 19cm; margin: 1.5cm auto; padding: 1.2cm;
+    border: 1px solid #1c1917; border-radius: 4px;
+}
+
+.bon-entete {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 2px solid #1c1917; padding-bottom: .8rem; margin-bottom: 1.2rem;
+}
+.bon-numero { text-align: right; }
+.bon-numero .numero { display: block; font-size: 1.5rem; font-weight: 800; letter-spacing: .03em; }
+
+.bon-bloc { margin-bottom: 1.2rem; }
+.bon-bloc h1 { font-size: 1.2rem; margin-bottom: .2rem; }
+.bon-bloc h2 { font-size: .95rem; text-transform: uppercase; letter-spacing: .05em; }
+
+.bon .tableau thead th { background: #1c1917; color: #fff; }
+
+.bon-signatures {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-top: 2.5rem;
+}
+.bon-signatures div { border-top: 1px solid #1c1917; padding-top: .3rem; min-height: 3.5cm; }
+.bon-signatures span { font-size: .85rem; color: #57534e; }
+
+.bon-pied {
+    margin-top: 1.5rem; padding-top: .8rem; border-top: 1px solid #e7e5e4;
+    font-size: .82rem; color: #57534e;
+}
+.bon-pied .signature { font-weight: 700; color: #be123c; }
+
+.bon-actions {
+    display: flex; gap: .75rem; justify-content: center; margin-bottom: 2rem;
+}
+
+@media print {
+    .bon-actions { display: none; }
+    .bon { margin: 0; border: none; padding: 0; max-width: none; }
+    @page { size: A4 portrait; margin: 1.5cm; }
+    body { font-size: 11pt; }
+    a { text-decoration: none; color: #1c1917; }
+}
