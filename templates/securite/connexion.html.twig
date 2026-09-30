@@ -1,0 +1,39 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Connexion à l’espace banque{% endblock %}
+
+{% block corps %}
+    <div class="colonne-etroite">
+        <h1>Espace banque</h1>
+        <p class="chapeau">Réservé au personnel des banques de sang et au CNTS.</p>
+
+        {% if erreur %}
+            <div class="alerte alerte-erreur" role="alert">
+                Identifiants incorrects. Vérifiez votre adresse et votre mot de passe.
+            </div>
+        {% endif %}
+
+        <form method="post" class="formulaire">
+            <div class="champ">
+                <label for="email">Adresse électronique</label>
+                <input type="email" id="email" name="email" value="{{ dernier_email }}"
+                       autocomplete="email" required autofocus>
+            </div>
+
+            <div class="champ">
+                <label for="mot_de_passe">Mot de passe</label>
+                <input type="password" id="mot_de_passe" name="mot_de_passe"
+                       autocomplete="current-password" required>
+            </div>
+
+            <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+
+            <button type="submit" class="bouton bouton-principal">Se connecter</button>
+        </form>
+
+        <p class="note-accessibilite">
+            Mot de passe oublié ? Contactez l’administrateur du CNTS : pour des raisons
+            de sécurité, la réinitialisation se fait de personne à personne.
+        </p>
+    </div>
+{% endblock %}

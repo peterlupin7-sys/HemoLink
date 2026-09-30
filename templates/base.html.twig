@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}{{ application }}{% endblock %} — {{ application }}</title>
+    <meta name="description" content="Trouvez une banque de sang proche de vous et précommandez des poches.">
+    <meta name="theme-color" content="#be123c">
+
+    <link rel="icon" href="{{ asset('favicon.svg') }}" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="{{ asset('images/icone-application-192.png') }}">
+    {# Polices et feuilles servies en local : la plateforme doit fonctionner sans internet. #}
+    <link rel="stylesheet" href="{{ asset('css/hemolink.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/application.css') }}">
+    {% block stylesheets %}{% endblock %}
+</head>
+<body class="{% block classe_body %}{% endblock %}">
+
+<a class="saut-contenu" href="#contenu">Aller au contenu</a>
+
+<header class="entete">
+    <div class="conteneur entete-barre">
+        <a class="entete-logo" href="{{ path('carte') }}">
+            <img src="{{ asset('images/logo-hemolink-blanc.svg') }}" alt="{{ application }}" height="34">
+        </a>
+
+        <nav class="entete-nav" aria-label="Navigation principale">
+            <a href="{{ path('carte') }}">Carte</a>
+            <a href="{{ path('suivi') }}">Suivre une précommande</a>
+            {% if app.user %}
+                <a href="{{ path('tableau_bord') }}">Tableau de bord</a>
+                {% if is_granted('ROLE_ADMIN') %}
+                    <a href="{{ path('administration') }}">Administration</a>
+                {% endif %}
+                <a class="entete-compte" href="{{ path('deconnexion') }}">
+                    {{ app.user.prenom }} — Déconnexion
+                </a>
+            {% else %}
+                <a class="entete-compte" href="{{ path('connexion') }}">Espace banque</a>
+            {% endif %}
+        </nav>
+    </div>
+</header>
+
+<main id="contenu" class="{% block classe_main %}conteneur{% endblock %}">
+    {% for type, messages in app.flashes %}
+        {% for message in messages %}
+            <div class="alerte alerte-{{ type }}" role="status">{{ message }}</div>
+        {% endfor %}
+    {% endfor %}
+
+    {% block corps %}{% endblock %}
+</main>
+
+<footer class="pied">
+    <div class="conteneur pied-grille">
+        <div>
+            <img src="{{ asset('images/logo-hemolink.svg') }}" alt="" height="30">
+            <p class="pied-signature">{{ signature }}</p>
+        </div>
+        <div>
+            <h2>Urgence</h2>
+            <p>En cas d’urgence vitale, appelez directement la banque la plus proche :
+                son numéro figure sur sa fiche.</p>
+        </div>
+        <div>
+            <h2>À propos</h2>
+            <p>{{ organisation }}<br>
+                Plateforme {{ application }} — version 1.0</p>
+        </div>
+    </div>
+</footer>
+
+{% block javascripts %}{% endblock %}
+</body>
+</html>

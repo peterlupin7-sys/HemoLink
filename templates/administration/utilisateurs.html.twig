@@ -1,0 +1,61 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Comptes{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Administration</p>
+            <h1>Comptes utilisateurs</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('administration') }}">Vue d’ensemble</a>
+            <a href="{{ path('administration_banques') }}">Banques</a>
+            <a class="actif" href="{{ path('administration_utilisateurs') }}">Comptes</a>
+            <a href="{{ path('administration_journal') }}">Journal</a>
+        </nav>
+    </header>
+
+    <p class="chapeau">
+        La création de comptes se fait en ligne de commande
+        (<code>php bin/console app:creer-utilisateur</code>) : le mot de passe n’est
+        ainsi jamais transmis par écrit.
+    </p>
+
+    <table class="tableau">
+        <thead>
+            <tr>
+                <th scope="col">Nom</th>
+                <th scope="col">Adresse</th>
+                <th scope="col">Rôle</th>
+                <th scope="col">Banque</th>
+                <th scope="col">Dernière connexion</th>
+                <th scope="col">État</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for utilisateur in utilisateurs %}
+                <tr>
+                    <th scope="row">{{ utilisateur.nomComplet }}</th>
+                    <td>{{ utilisateur.email }}</td>
+                    <td>
+                        {% for role in utilisateur.roles if role != 'ROLE_USER' %}
+                            {{ role|replace({'ROLE_': ''})|capitalize }}
+                        {% endfor %}
+                    </td>
+                    <td>{{ utilisateur.banque ? utilisateur.banque.nom : 'Niveau national' }}</td>
+                    <td class="muet">
+                        {{ utilisateur.derniereConnexion
+                            ? utilisateur.derniereConnexion|date('d/m/Y H:i') : 'jamais' }}
+                    </td>
+                    <td>
+                        <span class="pastille {{ utilisateur.actif ? 'etat-disponible' : 'etat-inconnu' }}">
+                            {{ utilisateur.actif ? 'Actif' : 'Désactivé' }}
+                        </span>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

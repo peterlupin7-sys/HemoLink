@@ -1,0 +1,57 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mise à jour du stock{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Stocks</p>
+            <h1>{{ banque.nom }}</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('tableau_bord') }}">Vue d’ensemble</a>
+            <a class="actif" href="{{ path('gestion_stocks') }}">Stocks</a>
+            <a href="{{ path('gestion_precommandes') }}">Précommandes</a>
+        </nav>
+    </header>
+
+    <p class="chapeau">
+        Indiquez le nombre de poches réellement présentes. L’écart est calculé et tracé
+        automatiquement : vous n’avez pas à faire la soustraction.
+    </p>
+
+    <form method="post" action="{{ path('gestion_stocks_maj') }}" class="formulaire-stock">
+        <input type="hidden" name="_token" value="{{ csrf_token('maj_stock') }}">
+
+        <ul class="saisie-stock">
+            {% for stock in stocks %}
+                <li class="saisie-ligne">
+                    <label for="groupe-{{ stock.groupeSanguin.id }}" class="groupe">
+                        {{ stock.groupeSanguin.code }}
+                    </label>
+                    <div class="saisie-etat">
+                        <span class="pastille {{ stock.etat|classe_etat }}">
+                            {{ stock.etat|libelle_etat }}
+                        </span>
+                        <span class="muet">mis à jour {{ stock.dateMaj|date('d/m à H:i') }}</span>
+                    </div>
+                    <input type="number" inputmode="numeric" min="0" max="999"
+                           id="groupe-{{ stock.groupeSanguin.id }}"
+                           name="quantite[{{ stock.groupeSanguin.id }}]"
+                           value="{{ stock.quantiteDisponible }}">
+                    <span class="muet">{{ stock.quantiteReservee }} réservée(s)</span>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <div class="actions-formulaire">
+            <button type="submit" class="bouton bouton-principal">Enregistrer le stock</button>
+            <a class="bouton bouton-texte" href="{{ path('tableau_bord') }}">Annuler</a>
+        </div>
+    </form>
+
+    <p class="note-accessibilite">
+        Les poches sorties du stock par une précommande confirmée ne sont pas à
+        déduire ici : elles le sont déjà.
+    </p>
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ banque.nom }}{% endblock %}
+
+{% block corps %}
+    <nav class="fil-ariane"><a href="{{ path('carte') }}">Carte</a> › {{ banque.ville }}</nav>
+
+    <article class="fiche">
+        <header class="fiche-entete">
+            <div>
+                <h1>{{ banque.nom }}</h1>
+                <p class="chapeau">
+                    {{ banque.adresse }}, {{ banque.ville }} ({{ banque.departement }})
+                    {% if distance %} · à {{ distance|distance }}{% endif %}
+                </p>
+            </div>
+            <div class="fiche-actions">
+                <a class="bouton bouton-principal"
+                   href="{{ path('precommande_nouvelle', {id: banque.id}) }}">
+                    Précommander des poches
+                </a>
+                <a class="bouton bouton-secondaire" href="tel:{{ banque.telephone|replace({' ': ''}) }}">
+                    Appeler {{ banque.telephone|telephone }}
+                </a>
+            </div>
+        </header>
+
+        <div class="fiche-grille">
+            <section class="bloc">
+                <h2>Stock par groupe sanguin</h2>
+                <table class="tableau">
+                    <caption class="muet">
+                        Nombre de poches disponibles, déclaré par la banque
+                    </caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Groupe</th>
+                            <th scope="col">Poches</th>
+                            <th scope="col">État</th>
+                            <th scope="col">Mise à jour</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in lignes %}
+                            {% set stock = ligne.stock %}
+                            <tr>
+                                <th scope="row"><span class="groupe">{{ stock.groupeSanguin.code }}</span></th>
+                                <td class="nombre">{{ stock.quantiteDisponible }}</td>
+                                <td>
+                                    <span class="pastille {{ stock.etat|classe_etat }}">
+                                        {{ stock.etat|libelle_etat }}
+                                    </span>
+                                    {% if ligne.substituts is not empty %}
+                                        <span class="substituts">
+                                            Compatibles :
+                                            {% for g in ligne.substituts %}{{ g.code }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td class="muet">{{ stock.dateMaj|date('d/m/Y à H:i') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <p class="note-accessibilite">
+                    Un stock n’est jamais indiqué par la seule couleur : le mot et le nombre
+                    font foi.
+                </p>
+            </section>
+
+            <aside class="bloc">
+                <h2>Informations pratiques</h2>
+                <dl class="definitions">
+                    <dt>Téléphone</dt>
+                    <dd>{{ banque.telephone|telephone }}</dd>
+                    {% if banque.telephoneUrgence %}
+                        <dt>Urgences</dt>
+                        <dd>{{ banque.telephoneUrgence|telephone }}</dd>
+                    {% endif %}
+                    {% if banque.horaires %}
+                        <dt>Horaires</dt>
+                        <dd>{{ banque.horaires }}</dd>
+                    {% endif %}
+                    {% if banque.email %}
+                        <dt>Courriel</dt>
+                        <dd>{{ banque.email }}</dd>
+                    {% endif %}
+                    <dt>Type</dt>
+                    <dd>{{ banque.type|capitalize }}</dd>
+                </dl>
+
+                <a class="lien-externe" rel="noopener"
+                   href="https://www.openstreetmap.org/?mlat={{ banque.latitude }}&mlon={{ banque.longitude }}#map=17/{{ banque.latitude }}/{{ banque.longitude }}">
+                    Voir l’itinéraire ↗
+                </a>
+            </aside>
+        </div>
+    </article>
+{% endblock %}

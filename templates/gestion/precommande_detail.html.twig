@@ -1,0 +1,150 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Précommande {{ precommande.numero }}{% endblock %}
+
+{% block corps %}
+    <nav class="fil-ariane">
+        <a href="{{ path('gestion_precommandes') }}">Précommandes</a> › {{ precommande.numero }}
+    </nav>
+
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Précommande</p>
+            <h1 class="numero">{{ precommande.numero }}</h1>
+            <p class="pastille {{ precommande.statut|classe_statut }}">
+                {{ precommande.libelleStatut }}
+            </p>
+        </div>
+    </header>
+
+    <div class="deux-colonnes">
+        <section class="bloc">
+            <h2>Demande</h2>
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Groupe</th>
+                        <th scope="col">Demandé</th>
+                        <th scope="col">Confirmé</th>
+                        <th scope="col">En stock</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in precommande.lignes %}
+                        {% set stock = precommande.banque.getStockPour(ligne.groupeSanguin) %}
+                        <tr>
+                            <th scope="row"><span class="groupe">{{ ligne.groupeSanguin.code }}</span></th>
+                            <td class="nombre">{{ ligne.quantiteDemandee }}</td>
+                            <td class="nombre">{{ ligne.quantiteConfirmee ?? '—' }}</td>
+                            <td class="nombre">
+                                {{ stock ? stock.quantiteDisponible : 0 }}
+                                {% if stock and stock.quantiteDisponible < ligne.quantiteDemandee %}
+                                    <span class="pastille etat-rupture">insuffisant</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <dl class="definitions">
+                <dt>Urgence</dt><dd>{{ precommande.urgence|capitalize }}</dd>
+                <dt>Motif</dt><dd>{{ precommande.motif ?? '—' }}</dd>
+                <dt>Dossier patient</dt><dd>{{ precommande.referencePatient ?? '—' }}</dd>
+                <dt>Retrait souhaité</dt><dd>{{ precommande.dateSouhaitee|date('d/m/Y') }}</dd>
+            </dl>
+        </section>
+
+        <aside class="bloc">
+            <h2>Demandeur</h2>
+            <dl class="definitions">
+                <dt>Nom</dt><dd>{{ precommande.demandeur.nom }}</dd>
+                <dt>Contact</dt><dd>{{ precommande.demandeur.responsable ?? '—' }}</dd>
+                <dt>Téléphone</dt>
+                <dd><a href="tel:{{ precommande.demandeur.telephone|replace({' ': ''}) }}">
+                    {{ precommande.demandeur.telephone|telephone }}</a></dd>
+                <dt>Ville</dt><dd>{{ precommande.demandeur.ville ?? '—' }}</dd>
+                <dt>Agrément</dt><dd>{{ precommande.demandeur.numeroAgrement ?? '—' }}</dd>
+            </dl>
+
+            <h2>Actions</h2>
+            <div class="actions-pile">
+                {% if precommande.statut == 'EN_ATTENTE' %}
+                    <form method="post" action="{{ path('gestion_precommande_action',
+                        {id: precommande.id, action: 'confirmer'}) }}">
+                        <input type="hidden" name="_token"
+                               value="{{ csrf_token('precommande_' ~ precommande.id) }}">
+                        <button class="bouton bouton-principal" type="submit">
+                            Confirmer et réserver les poches
+                        </button>
+                    </form>
+                {% elseif precommande.statut == 'CONFIRMEE' %}
+                    <form method="post" action="{{ path('gestion_precommande_action',
+                        {id: precommande.id, action: 'prete'}) }}">
+                        <input type="hidden" name="_token"
+                               value="{{ csrf_token('precommande_' ~ precommande.id) }}">
+                        <button class="bouton bouton-principal" type="submit">
+                            Déclarer prête au retrait
+                        </button>
+                    </form>
+                {% endif %}
+
+                {% if precommande.statut in ['CONFIRMEE', 'PRETE'] %}
+                    <form method="post" action="{{ path('gestion_precommande_action',
+                        {id: precommande.id, action: 'retirer'}) }}">
+                        <input type="hidden" name="_token"
+                               value="{{ csrf_token('precommande_' ~ precommande.id) }}">
+                        <button class="bouton bouton-secondaire" type="submit">
+                            Marquer comme retirée
+                        </button>
+                    </form>
+                    <a class="bouton bouton-texte"
+                       href="{{ path('suivi_bon', {numero: precommande.numero}) }}">
+                        Imprimer le bon de retrait
+                    </a>
+                {% endif %}
+
+                {% if precommande.estModifiable %}
+                    <form method="post" class="formulaire-annulation"
+                          action="{{ path('gestion_precommande_action',
+                              {id: precommande.id, action: 'annuler'}) }}">
+                        <input type="hidden" name="_token"
+                               value="{{ csrf_token('precommande_' ~ precommande.id) }}">
+                        <label for="raison">Motif d’annulation</label>
+                        <input type="text" id="raison" name="raison"
+                               placeholder="Stock insuffisant, demande en double…">
+                        <button class="bouton bouton-danger" type="submit">Annuler la précommande</button>
+                    </form>
+                {% endif %}
+            </div>
+        </aside>
+    </div>
+
+    <section class="bloc">
+        <h2>Poches réservées</h2>
+        {% if precommande.poches is empty %}
+            <p class="vide">Aucune poche réservée pour l’instant.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Code</th>
+                        <th scope="col">Groupe</th>
+                        <th scope="col">Péremption</th>
+                        <th scope="col">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for poche in precommande.poches %}
+                        <tr>
+                            <th scope="row"><code>{{ poche.codePoche }}</code></th>
+                            <td><span class="groupe">{{ poche.groupeSanguin.code }}</span></td>
+                            <td>{{ poche.datePeremption|date('d/m/Y') }}</td>
+                            <td>{{ poche.statut|capitalize }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+{% endblock %}

@@ -1,0 +1,145 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Tableau de bord — {{ banque.nom }}{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Tableau de bord</p>
+            <h1>{{ banque.nom }}</h1>
+        </div>
+        <nav class="onglets">
+            <a class="actif" href="{{ path('tableau_bord') }}">Vue d’ensemble</a>
+            <a href="{{ path('gestion_stocks') }}">Stocks</a>
+            <a href="{{ path('gestion_precommandes') }}">Précommandes</a>
+        </nav>
+    </header>
+
+    <section class="indicateurs">
+        <div class="indicateur">
+            <span class="nombre-cle">{{ total_poches }}</span>
+            <span class="libelle">poches en stock</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ precommandes_jour }}</span>
+            <span class="libelle">précommandes aujourd’hui</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ par_statut['EN_ATTENTE']|default(0) }}</span>
+            <span class="libelle">en attente de confirmation</span>
+        </div>
+        <div class="indicateur {{ groupes_en_rupture > 0 ? 'indicateur-alerte' : '' }}">
+            <span class="nombre-cle">{{ groupes_en_rupture }}</span>
+            <span class="libelle">groupe(s) en rupture</span>
+        </div>
+        <div class="indicateur {{ peremptions|length > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ peremptions|length }}</span>
+            <span class="libelle">poche(s) périment sous 7 jours</span>
+        </div>
+    </section>
+
+    <div class="deux-colonnes">
+        <section class="bloc">
+            <h2>Précommandes à traiter</h2>
+            {% if a_traiter is empty %}
+                <p class="vide">Rien en attente. Tout est traité.</p>
+            {% else %}
+                <table class="tableau">
+                    <thead>
+                        <tr>
+                            <th scope="col">Numéro</th>
+                            <th scope="col">Demandeur</th>
+                            <th scope="col">Urgence</th>
+                            <th scope="col">Poches</th>
+                            <th scope="col"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for precommande in a_traiter %}
+                            <tr>
+                                <th scope="row"><code>{{ precommande.numero }}</code></th>
+                                <td>{{ precommande.demandeur.nom }}</td>
+                                <td>
+                                    <span class="pastille {{ precommande.urgence == 'VITALE' ? 'etat-rupture' : (precommande.urgence == 'URGENTE' ? 'etat-tension' : 'etat-inconnu') }}">
+                                        {{ precommande.urgence|capitalize }}
+                                    </span>
+                                </td>
+                                <td class="nombre">{{ precommande.quantiteTotale }}</td>
+                                <td>
+                                    <a class="bouton bouton-texte"
+                                       href="{{ path('gestion_precommande', {id: precommande.id}) }}">
+                                        Traiter
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
+
+        <section class="bloc">
+            <h2>Stock par groupe</h2>
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Groupe</th>
+                        <th scope="col">Disponibles</th>
+                        <th scope="col">Réservées</th>
+                        <th scope="col">État</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for stock in stocks %}
+                        <tr>
+                            <th scope="row"><span class="groupe">{{ stock.groupeSanguin.code }}</span></th>
+                            <td class="nombre">{{ stock.quantiteDisponible }}</td>
+                            <td class="nombre">{{ stock.quantiteReservee }}</td>
+                            <td>
+                                <span class="pastille {{ stock.etat|classe_etat }}">
+                                    {{ stock.etat|libelle_etat }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a class="bouton bouton-secondaire" href="{{ path('gestion_stocks') }}">
+                Mettre à jour le stock
+            </a>
+        </section>
+    </div>
+
+    <section class="bloc">
+        <h2>Derniers mouvements</h2>
+        <table class="tableau">
+            <thead>
+                <tr>
+                    <th scope="col">Date</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Groupe</th>
+                    <th scope="col">Quantité</th>
+                    <th scope="col">Stock après</th>
+                    <th scope="col">Motif</th>
+                    <th scope="col">Par</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for mouvement in mouvements %}
+                    <tr>
+                        <td class="muet">{{ mouvement.dateMouvement|date('d/m H:i') }}</td>
+                        <td>{{ mouvement.type|capitalize }}</td>
+                        <td><span class="groupe">{{ mouvement.groupeSanguin.code }}</span></td>
+                        <td class="nombre">{{ mouvement.quantite > 0 ? '+' : '' }}{{ mouvement.quantite }}</td>
+                        <td class="nombre">{{ mouvement.quantiteApres }}</td>
+                        <td class="muet">{{ mouvement.motif }}</td>
+                        <td class="muet">{{ mouvement.utilisateur ? mouvement.utilisateur.nomComplet : 'Système' }}</td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="7" class="vide">Aucun mouvement enregistré.</td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endblock %}

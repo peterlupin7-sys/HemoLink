@@ -1,0 +1,74 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Précommandes — {{ banque.nom }}{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Précommandes</p>
+            <h1>{{ banque.nom }}</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('tableau_bord') }}">Vue d’ensemble</a>
+            <a href="{{ path('gestion_stocks') }}">Stocks</a>
+            <a class="actif" href="{{ path('gestion_precommandes') }}">Précommandes</a>
+        </nav>
+    </header>
+
+    <nav class="filtres">
+        <a class="{{ statut is null ? 'actif' : '' }}" href="{{ path('gestion_precommandes') }}">
+            Toutes
+        </a>
+        {% for cle, libelle in {'EN_ATTENTE': 'En attente', 'CONFIRMEE': 'Confirmées',
+            'PRETE': 'Prêtes', 'RETIREE': 'Retirées', 'ANNULEE': 'Annulées'} %}
+            <a class="{{ statut == cle ? 'actif' : '' }}"
+               href="{{ path('gestion_precommandes', {statut: cle}) }}">
+                {{ libelle }} ({{ par_statut[cle]|default(0) }})
+            </a>
+        {% endfor %}
+    </nav>
+
+    <table class="tableau">
+        <thead>
+            <tr>
+                <th scope="col">Numéro</th>
+                <th scope="col">Déposée</th>
+                <th scope="col">Demandeur</th>
+                <th scope="col">Groupes</th>
+                <th scope="col">Urgence</th>
+                <th scope="col">Statut</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for precommande in precommandes %}
+                <tr>
+                    <th scope="row"><code>{{ precommande.numero }}</code></th>
+                    <td class="muet">{{ precommande.dateCreation|date('d/m/Y H:i') }}</td>
+                    <td>{{ precommande.demandeur.nom }}</td>
+                    <td>
+                        {% for ligne in precommande.lignes %}
+                            <span class="groupe">{{ ligne.groupeSanguin.code }}</span>
+                            ×{{ ligne.quantiteDemandee }}
+                        {% endfor %}
+                    </td>
+                    <td>{{ precommande.urgence|capitalize }}</td>
+                    <td>
+                        <span class="pastille {{ precommande.statut|classe_statut }}">
+                            {{ precommande.libelleStatut }}
+                        </span>
+                    </td>
+                    <td>
+                        <a class="bouton bouton-texte"
+                           href="{{ path('gestion_precommande', {id: precommande.id}) }}">
+                            Ouvrir
+                        </a>
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="7" class="vide">Aucune précommande pour ce filtre.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

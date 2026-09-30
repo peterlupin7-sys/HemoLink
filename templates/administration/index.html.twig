@@ -1,0 +1,94 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Administration nationale{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Administration</p>
+            <h1>Vue nationale</h1>
+        </div>
+        <nav class="onglets">
+            <a class="actif" href="{{ path('administration') }}">Vue d’ensemble</a>
+            <a href="{{ path('administration_banques') }}">Banques</a>
+            <a href="{{ path('administration_utilisateurs') }}">Comptes</a>
+            <a href="{{ path('administration_journal') }}">Journal</a>
+        </nav>
+    </header>
+
+    <section class="indicateurs">
+        <div class="indicateur">
+            <span class="nombre-cle">{{ banques|length }}</span>
+            <span class="libelle">banques actives</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ totaux_etat['DISPONIBLE']|default(0) }}</span>
+            <span class="libelle">stocks disponibles</span>
+        </div>
+        <div class="indicateur indicateur-attention">
+            <span class="nombre-cle">{{ totaux_etat['TENSION']|default(0) }}</span>
+            <span class="libelle">stocks en tension</span>
+        </div>
+        <div class="indicateur indicateur-alerte">
+            <span class="nombre-cle">{{ totaux_etat['RUPTURE']|default(0) }}</span>
+            <span class="libelle">ruptures</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ totaux_etat['NON_COMMUNIQUE']|default(0) }}</span>
+            <span class="libelle">stocks non communiqués</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ precommandes_jour }}</span>
+            <span class="libelle">précommandes aujourd’hui</span>
+        </div>
+    </section>
+
+    <div class="deux-colonnes">
+        <section class="bloc">
+            <h2>Ruptures en cours</h2>
+            {% if ruptures is empty %}
+                <p class="vide">Aucune rupture signalée. C’est rare : vérifiez que les
+                    banques mettent bien leurs stocks à jour.</p>
+            {% else %}
+                <table class="tableau">
+                    <thead>
+                        <tr>
+                            <th scope="col">Banque</th>
+                            <th scope="col">Ville</th>
+                            <th scope="col">Groupe</th>
+                            <th scope="col">Depuis</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stock in ruptures %}
+                            <tr>
+                                <th scope="row">{{ stock.banque.nom }}</th>
+                                <td>{{ stock.banque.ville }}</td>
+                                <td><span class="groupe">{{ stock.groupeSanguin.code }}</span></td>
+                                <td class="muet">{{ stock.dateMaj|date('d/m/Y H:i') }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
+
+        <section class="bloc">
+            <h2>Précommandes par statut</h2>
+            <table class="tableau">
+                <tbody>
+                    {% for statut, total in par_statut %}
+                        <tr>
+                            <th scope="row">
+                                <span class="pastille {{ statut|classe_statut }}">{{ statut|capitalize }}</span>
+                            </th>
+                            <td class="nombre">{{ total }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <p class="muet">{{ nb_utilisateurs }} compte(s) actif(s) sur la plateforme.</p>
+        </section>
+    </div>
+{% endblock %}

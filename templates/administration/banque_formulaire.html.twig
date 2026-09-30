@@ -1,0 +1,53 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ creation ? 'Nouvelle banque' : banque.nom }}{% endblock %}
+
+{% block corps %}
+    <nav class="fil-ariane">
+        <a href="{{ path('administration_banques') }}">Banques</a> ›
+        {{ creation ? 'Nouvelle' : banque.nom }}
+    </nav>
+
+    <h1>{{ creation ? 'Ajouter une banque' : 'Modifier ' ~ banque.nom }}</h1>
+
+    {{ form_start(formulaire, {attr: {class: 'formulaire'}}) }}
+        <section class="bloc">
+            <h2>Identité</h2>
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.code) }}
+                {{ form_row(formulaire.type) }}
+            </div>
+            {{ form_row(formulaire.nom) }}
+            {{ form_row(formulaire.statut) }}
+        </section>
+
+        <section class="bloc">
+            <h2>Localisation</h2>
+            {{ form_row(formulaire.adresse) }}
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.ville) }}
+                {{ form_row(formulaire.departement) }}
+            </div>
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.latitude) }}
+                {{ form_row(formulaire.longitude) }}
+            </div>
+        </section>
+
+        <section class="bloc">
+            <h2>Contact</h2>
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.telephone) }}
+                {{ form_row(formulaire.telephoneUrgence) }}
+            </div>
+            {{ form_row(formulaire.email) }}
+            {{ form_row(formulaire.horaires) }}
+            {{ form_row(formulaire.capaciteStockage) }}
+        </section>
+
+        <div class="actions-formulaire">
+            <button type="submit" class="bouton bouton-principal">Enregistrer</button>
+            <a class="bouton bouton-texte" href="{{ path('administration_banques') }}">Annuler</a>
+        </div>
+    {{ form_end(formulaire) }}
+{% endblock %}

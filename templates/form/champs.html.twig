@@ -1,0 +1,33 @@
+{% use 'form_div_layout.html.twig' %}
+
+{% block form_row %}
+    <div class="champ {% if errors|length > 0 %}champ-erreur{% endif %}">
+        {{ form_label(form) }}
+        {{ form_widget(form) }}
+        {% if help is defined and help %}
+            <p class="aide">{{ help }}</p>
+        {% endif %}
+        {{ form_errors(form) }}
+    </div>
+{% endblock %}
+
+{% block form_errors %}
+    {% if errors|length > 0 %}
+        <ul class="erreurs" role="alert">
+            {% for error in errors %}
+                <li>{{ error.message }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+{% endblock %}
+
+{% block choice_widget_expanded %}
+    <div class="choix">
+        {% for child in form %}
+            <label class="choix-option">
+                {{ form_widget(child) }}
+                <span>{{ child.vars.label }}</span>
+            </label>
+        {% endfor %}
+    </div>
+{% endblock %}

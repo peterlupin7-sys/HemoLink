@@ -1,0 +1,28 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Suivre une précommande{% endblock %}
+
+{% block corps %}
+    <div class="colonne-etroite">
+        <h1>Suivre une précommande</h1>
+        <p class="chapeau">
+            Saisissez le numéro reçu par SMS. Il ressemble à
+            <code>PRE-COT-2026-00001</code>.
+        </p>
+
+        <form method="get" action="{{ path('suivi') }}" class="formulaire">
+            <div class="champ">
+                <label for="numero">Numéro de précommande</label>
+                <input type="text" id="numero" name="numero" value="{{ numero }}"
+                       placeholder="PRE-COT-2026-00001" autocomplete="off"
+                       autocapitalize="characters" spellcheck="false" required>
+            </div>
+            <button type="submit" class="bouton bouton-principal">Rechercher</button>
+        </form>
+
+        <p class="note-accessibilite">
+            Vous avez perdu votre numéro ? Appelez la banque : elle peut le retrouver
+            avec votre téléphone.
+        </p>
+    </div>
+{% endblock %}

@@ -1,0 +1,71 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Précommander des poches — {{ banque.nom }}{% endblock %}
+
+{% block corps %}
+    <nav class="fil-ariane">
+        <a href="{{ path('carte') }}">Carte</a> ›
+        <a href="{{ path('banque_fiche', {id: banque.id}) }}">{{ banque.nom }}</a> ›
+        Précommande
+    </nav>
+
+    <h1>Précommander des poches</h1>
+    <p class="chapeau">
+        Auprès de <strong>{{ banque.nom }}</strong>, {{ banque.ville }}.
+        Aucun compte n’est nécessaire : vous recevrez un numéro de suivi par SMS.
+    </p>
+
+    {{ form_start(formulaire, {attr: {class: 'formulaire', novalidate: 'novalidate'}}) }}
+        <section class="bloc">
+            <h2>1. Qui demande ?</h2>
+            {{ form_row(formulaire.demandeur.type) }}
+            {{ form_row(formulaire.demandeur.nom) }}
+            {{ form_row(formulaire.demandeur.responsable) }}
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.demandeur.telephone) }}
+                {{ form_row(formulaire.demandeur.email) }}
+            </div>
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.demandeur.ville) }}
+                {{ form_row(formulaire.demandeur.numeroAgrement) }}
+            </div>
+        </section>
+
+        <section class="bloc">
+            <h2>2. Quelles poches ?</h2>
+
+            <div id="lignes" data-prototype="{{ form_widget(formulaire.lignes.vars.prototype)|e('html_attr') }}"
+                 data-index="{{ formulaire.lignes|length }}">
+                {% for ligne in formulaire.lignes %}
+                    <div class="ligne-poche">{{ form_widget(ligne) }}</div>
+                {% endfor %}
+            </div>
+
+            <button type="button" class="bouton bouton-secondaire" id="ajouter-ligne">
+                Ajouter un autre groupe
+            </button>
+            {{ form_errors(formulaire.lignes) }}
+        </section>
+
+        <section class="bloc">
+            <h2>3. Quand et pourquoi ?</h2>
+            {{ form_row(formulaire.urgence) }}
+            <div class="deux-colonnes">
+                {{ form_row(formulaire.dateSouhaitee) }}
+                {{ form_row(formulaire.motif) }}
+            </div>
+            {{ form_row(formulaire.referencePatient) }}
+        </section>
+
+        <div class="actions-formulaire">
+            <button type="submit" class="bouton bouton-principal">Envoyer la précommande</button>
+            <a class="bouton bouton-texte" href="{{ path('banque_fiche', {id: banque.id}) }}">
+                Annuler
+            </a>
+        </div>
+    {{ form_end(formulaire) }}
+{% endblock %}
+
+{% block javascripts %}
+    <script src="{{ asset('js/precommande.js') }}"></script>
+{% endblock %}

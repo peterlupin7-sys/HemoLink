@@ -1,0 +1,84 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Précommande {{ precommande.numero }}{% endblock %}
+
+{% block corps %}
+    <div class="colonne-etroite">
+        <nav class="fil-ariane"><a href="{{ path('suivi') }}">Suivi</a> › {{ precommande.numero }}</nav>
+
+        <header class="suivi-entete">
+            <p class="etiquette">Précommande</p>
+            <h1 class="numero">{{ precommande.numero }}</h1>
+            <p class="pastille {{ precommande.statut|classe_statut }}">
+                {{ precommande.libelleStatut }}
+            </p>
+        </header>
+
+        <ol class="etapes">
+            {% set ordre = {'EN_ATTENTE': 1, 'CONFIRMEE': 2, 'PRETE': 3, 'RETIREE': 4} %}
+            {% set courant = ordre[precommande.statut]|default(0) %}
+            {% for libelle, rang in {'Déposée': 1, 'Confirmée': 2, 'Prête au retrait': 3, 'Retirée': 4} %}
+                <li class="{{ courant >= rang ? 'faite' : '' }}">{{ libelle }}</li>
+            {% endfor %}
+        </ol>
+
+        {% if precommande.statut in ['ANNULEE', 'EXPIREE'] %}
+            <div class="alerte alerte-erreur">
+                Cette précommande est {{ precommande.libelleStatut|lower }}.
+                {{ precommande.commentaire }}
+            </div>
+        {% endif %}
+
+        <section class="bloc">
+            <h2>Détail</h2>
+            <dl class="definitions">
+                <dt>Banque</dt>
+                <dd>
+                    <a href="{{ path('banque_fiche', {id: precommande.banque.id}) }}">
+                        {{ precommande.banque.nom }}
+                    </a><br>
+                    {{ precommande.banque.adresse }}, {{ precommande.banque.ville }}<br>
+                    {{ precommande.banque.telephone|telephone }}
+                </dd>
+                <dt>Demandeur</dt>
+                <dd>{{ precommande.demandeur.nom }}</dd>
+                <dt>Urgence</dt>
+                <dd>{{ precommande.urgence|capitalize }}</dd>
+                <dt>Retrait souhaité</dt>
+                <dd>{{ precommande.dateSouhaitee|date('d/m/Y') }}</dd>
+                <dt>Déposée le</dt>
+                <dd>{{ precommande.dateCreation|date('d/m/Y à H:i') }}</dd>
+            </dl>
+
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Groupe</th>
+                        <th scope="col">Demandé</th>
+                        <th scope="col">Confirmé</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ligne in precommande.lignes %}
+                        <tr>
+                            <th scope="row">
+                                <span class="groupe">{{ ligne.groupeSanguin.code }}</span>
+                                {% if ligne.groupeSubstitue %}
+                                    <span class="muet">remplacé par {{ ligne.groupeSubstitue.code }}</span>
+                                {% endif %}
+                            </th>
+                            <td class="nombre">{{ ligne.quantiteDemandee }}</td>
+                            <td class="nombre">{{ ligne.quantiteConfirmee ?? '—' }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </section>
+
+        {% if precommande.statut in ['CONFIRMEE', 'PRETE', 'RETIREE'] %}
+            <a class="bouton bouton-principal" href="{{ path('suivi_bon', {numero: precommande.numero}) }}">
+                Imprimer le bon de retrait
+            </a>
+        {% endif %}
+    </div>
+{% endblock %}

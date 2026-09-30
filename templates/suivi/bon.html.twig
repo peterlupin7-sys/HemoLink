@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bon de retrait {{ precommande.numero }}</title>
+    <link rel="stylesheet" href="{{ asset('css/hemolink.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/application.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/impression.css') }}" media="all">
+</head>
+<body class="page-bon">
+
+<div class="bon">
+    <header class="bon-entete">
+        <img src="{{ asset('images/logo-hemolink-noir.svg') }}" alt="HemoLink" height="40">
+        <div class="bon-numero">
+            <span class="etiquette">Bon de retrait</span>
+            <strong class="numero">{{ precommande.numero }}</strong>
+        </div>
+    </header>
+
+    <section class="bon-bloc">
+        <h1>{{ precommande.banque.nom }}</h1>
+        <p>{{ precommande.banque.adresse }}, {{ precommande.banque.ville }}<br>
+           Téléphone : {{ precommande.banque.telephone|telephone }}</p>
+    </section>
+
+    <table class="tableau">
+        <thead>
+            <tr>
+                <th scope="col">Groupe sanguin</th>
+                <th scope="col">Poches confirmées</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ligne in precommande.lignes %}
+                <tr>
+                    <th scope="row">{{ (ligne.groupeSubstitue ?? ligne.groupeSanguin).code }}</th>
+                    <td class="nombre">{{ ligne.quantiteConfirmee ?? ligne.quantiteDemandee }}</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <section class="bon-bloc deux-colonnes">
+        <div>
+            <h2>Demandeur</h2>
+            <p>{{ precommande.demandeur.nom }}<br>
+               {{ precommande.demandeur.responsable }}<br>
+               {{ precommande.demandeur.telephone|telephone }}</p>
+        </div>
+        <div>
+            <h2>Références</h2>
+            <p>Dossier : {{ precommande.referencePatient ?? '—' }}<br>
+               Urgence : {{ precommande.urgence|capitalize }}<br>
+               Confirmée le :
+               {{ precommande.dateConfirmation ? precommande.dateConfirmation|date('d/m/Y à H:i') : '—' }}</p>
+        </div>
+    </section>
+
+    <section class="bon-signatures">
+        <div><span>Agent de la banque</span></div>
+        <div><span>Personne qui retire</span></div>
+    </section>
+
+    <footer class="bon-pied">
+        <p>Document généré par HemoLink le {{ "now"|date('d/m/Y à H:i') }}.
+           Présentez ce bon et une pièce d’identité au guichet.</p>
+        <p class="signature">Chaque poche sauve une vie</p>
+    </footer>
+</div>
+
+<div class="bon-actions">
+    <button type="button" class="bouton bouton-principal" onclick="window.print()">Imprimer</button>
+    <a class="bouton bouton-texte" href="{{ path('suivi_detail', {numero: precommande.numero}) }}">
+        Retour au suivi
+    </a>
+</div>
+
+</body>
+</html>

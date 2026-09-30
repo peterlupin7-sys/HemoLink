@@ -1,0 +1,59 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Banques{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Administration</p>
+            <h1>Banques de sang</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('administration') }}">Vue d’ensemble</a>
+            <a class="actif" href="{{ path('administration_banques') }}">Banques</a>
+            <a href="{{ path('administration_utilisateurs') }}">Comptes</a>
+            <a href="{{ path('administration_journal') }}">Journal</a>
+        </nav>
+    </header>
+
+    <a class="bouton bouton-principal" href="{{ path('administration_banque_nouvelle') }}">
+        Ajouter une banque
+    </a>
+
+    <table class="tableau">
+        <thead>
+            <tr>
+                <th scope="col">Code</th>
+                <th scope="col">Nom</th>
+                <th scope="col">Ville</th>
+                <th scope="col">Type</th>
+                <th scope="col">Position</th>
+                <th scope="col">Statut</th>
+                <th scope="col"></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for banque in banques %}
+                <tr>
+                    <th scope="row"><code>{{ banque.code }}</code></th>
+                    <td>{{ banque.nom }}</td>
+                    <td>{{ banque.ville }}</td>
+                    <td>{{ banque.type|capitalize }}</td>
+                    <td class="muet">{{ banque.latitude }}, {{ banque.longitude }}</td>
+                    <td>
+                        <span class="pastille {{ banque.estActive ? 'etat-disponible' : 'etat-inconnu' }}">
+                            {{ banque.statut|capitalize }}
+                        </span>
+                    </td>
+                    <td>
+                        <a class="bouton bouton-texte"
+                           href="{{ path('administration_banque_modifier', {id: banque.id}) }}">
+                            Modifier
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

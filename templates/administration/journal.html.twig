@@ -1,0 +1,51 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Journal des actions{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Administration</p>
+            <h1>Journal des actions</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('administration') }}">Vue d’ensemble</a>
+            <a href="{{ path('administration_banques') }}">Banques</a>
+            <a href="{{ path('administration_utilisateurs') }}">Comptes</a>
+            <a class="actif" href="{{ path('administration_journal') }}">Journal</a>
+        </nav>
+    </header>
+
+    <p class="chapeau">
+        Les 100 dernières actions sensibles. Ce journal est la mémoire de la
+        plateforme : il permet d’expliquer un stock qui a changé.
+    </p>
+
+    <table class="tableau">
+        <thead>
+            <tr>
+                <th scope="col">Date</th>
+                <th scope="col">Utilisateur</th>
+                <th scope="col">Action</th>
+                <th scope="col">Objet</th>
+                <th scope="col">Détail</th>
+                <th scope="col">Adresse IP</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for entree in entrees %}
+                <tr>
+                    <td class="muet">{{ entree.dateAction|date('d/m/Y H:i') }}</td>
+                    <td>{{ entree.utilisateur ? entree.utilisateur.nomComplet : 'Visiteur' }}</td>
+                    <td><strong>{{ entree.action }}</strong></td>
+                    <td>{{ entree.entite }}{{ entree.entiteId ? ' #' ~ entree.entiteId : '' }}</td>
+                    <td>{{ entree.details }}</td>
+                    <td class="muet">{{ entree.adresseIp }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" class="vide">Journal vide.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
