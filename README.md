@@ -203,9 +203,20 @@ pour passer sur n'importe quel terminal.
 
 ## Projet académique
 
-Projet réalisé sous l'encadrement de **M. Briand SAIZONOU**.
+Institut universitaire **« Les Cours Sonou »** — Licence 3, Systèmes
+informatiques et logiciels (SIL). **Groupe 1**, année académique 2025–2026,
+sous la supervision de **M. Briand SAIZONOU**.
 
-Membres de l'équipe : *à compléter*.
+| Membre | Lot de travail |
+| --- | --- |
+| BALLARABE Amrath | Carte, géolocalisation et calcul des distances |
+| HONFO Jennyfer | Entités Doctrine, migrations, fixtures et base de données |
+| HOUKONNOU Daniel | Précommandes, numérotation séquentielle et transactions |
+| KOKOYE Alida | Sécurité, rôles et droits d'accès ; gabarits Twig et accessibilité |
+| YANSOUNNOU Géovanni | Notifications SMS, sauvegardes, tests PHPUnit et documentation |
+
+Les rôles Scrum (Product Owner, Scrum Master, équipe de développement) sont
+tenus par les membres du groupe et tournent d'un sprint à l'autre.
 
 ## Licence
 
