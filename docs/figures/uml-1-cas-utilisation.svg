@@ -1,0 +1,153 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1300" viewBox="0 0 1800 1300" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect width="1800" height="1300" fill="#f8fafc"/>
+<defs><marker id="fl" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#64748b"/></marker><marker id="flr" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#be123c"/></marker><marker id="flo" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="none" stroke="#64748b" stroke-width="1.4"/></marker><marker id="tri" markerWidth="14" markerHeight="14" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#fff" stroke="#64748b" stroke-width="1.4"/></marker><marker id="dia" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#64748b"/></marker><marker id="diav" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#fff" stroke="#64748b" stroke-width="1.3"/></marker><marker id="pt" markerWidth="8" markerHeight="8" refX="4" refY="4"><circle cx="4" cy="4" r="3.4" fill="#0f172a"/></marker></defs>
+<text x="40" y="40" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">HemoLink v1.0 — Diagramme de cas d’utilisation</text>
+<text x="1760" y="40" font-size="12.5" fill="#64748b" text-anchor="end">5 acteurs humains · 2 acteurs externes · 20 cas d’utilisation</text>
+<rect x="340" y="80" width="1120" height="1060" rx="16" fill="#ffffff" stroke="#be123c" stroke-width="2"/>
+<text x="900" y="110" font-size="15" fill="#be123c" text-anchor="middle" font-weight="700">Système HemoLink — géolocalisation des banques de sang et précommande de poches</text>
+<rect x="366" y="118" width="1068" height="250" rx="12" fill="#ecfeff" stroke="#0891b2" stroke-width="1.1" stroke-dasharray="7 5"/>
+<text x="382" y="140" font-size="12.5" fill="#0891b2" text-anchor="start" font-weight="700">Espace public (sans authentification)</text>
+<rect x="366" y="390" width="1068" height="250" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="1.1" stroke-dasharray="7 5"/>
+<text x="382" y="412" font-size="12.5" fill="#ea580c" text-anchor="start" font-weight="700">Exploitation d’une banque de sang (gestionnaire, agent)</text>
+<rect x="366" y="662" width="1068" height="250" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.1" stroke-dasharray="7 5"/>
+<text x="382" y="684" font-size="12.5" fill="#7c3aed" text-anchor="start" font-weight="700">Administration du réseau (administrateur CNTS)</text>
+<rect x="366" y="934" width="1068" height="150" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.1" stroke-dasharray="7 5"/>
+<text x="382" y="956" font-size="12.5" fill="#2563eb" text-anchor="start" font-weight="700">Services transverses</text>
+<ellipse cx="540" cy="200" rx="146" ry="35" fill="#ffffff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="540" y="204.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Consulter les disponibilités par groupe</text>
+<ellipse cx="900" cy="200" rx="146" ry="35" fill="#ffffff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="900" y="204.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Voir les groupes compatibles</text>
+<ellipse cx="1260" cy="200" rx="146" ry="35" fill="#ffffff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="1260" y="204.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Localiser les banques les plus proches</text>
+<ellipse cx="540" cy="305" rx="146" ry="35" fill="#ffffff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="540" y="309.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Passer une précommande de poches</text>
+<ellipse cx="900" cy="305" rx="146" ry="35" fill="#ffffff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="900" y="309.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Suivre sa précommande par numéro</text>
+<ellipse cx="540" cy="472" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="540" y="476.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Traiter les précommandes reçues</text>
+<ellipse cx="900" cy="472" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="900" y="476.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Mettre à jour le stock par groupe</text>
+<ellipse cx="1260" cy="472" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="1260" y="476.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Préparer et remettre les poches</text>
+<ellipse cx="540" cy="577" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="540" y="581.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Enregistrer les entrées de poches</text>
+<ellipse cx="900" cy="577" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="900" y="581.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Suivre les dates de péremption</text>
+<ellipse cx="1260" cy="577" rx="146" ry="35" fill="#ffffff" stroke="#ea580c" stroke-width="1.6"/>
+<text x="1260" y="581.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Consulter le tableau de bord</text>
+<ellipse cx="540" cy="744" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="540" y="748.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Créer et gérer les banques de sang</text>
+<ellipse cx="900" cy="744" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="900" y="748.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Géolocaliser une banque</text>
+<ellipse cx="1260" cy="744" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="1260" y="748.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Créer les comptes gestionnaires</text>
+<ellipse cx="540" cy="849" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="540" y="853.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Gérer les groupes sanguins</text>
+<ellipse cx="900" cy="849" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="900" y="853.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Consulter les statistiques du réseau</text>
+<ellipse cx="1260" cy="849" rx="146" ry="35" fill="#ffffff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="1260" y="853.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Sauvegarder et restaurer la base</text>
+<ellipse cx="540" cy="1016" rx="146" ry="35" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+<text x="540" y="1020.0" font-size="12.2" fill="#0f172a" text-anchor="middle">S’authentifier</text>
+<ellipse cx="900" cy="1016" rx="146" ry="35" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+<text x="900" y="1020.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Notifier le demandeur par SMS</text>
+<ellipse cx="1260" cy="1016" rx="146" ry="35" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+<text x="1260" y="1020.0" font-size="12.2" fill="#0f172a" text-anchor="middle">Journaliser les actions</text>
+<circle cx="170" cy="170" r="15" fill="#ffffff" stroke="#0891b2" stroke-width="2"/>
+<line x1="170" y1="185" x2="170" y2="222" stroke="#0891b2" stroke-width="2"/>
+<line x1="148" y1="197" x2="192" y2="197" stroke="#0891b2" stroke-width="2"/>
+<line x1="170" y1="222" x2="152" y2="250" stroke="#0891b2" stroke-width="2"/>
+<line x1="170" y1="222" x2="188" y2="250" stroke="#0891b2" stroke-width="2"/>
+<text x="170" y="270" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Visiteur / Patient</text>
+<text x="170" y="285" font-size="10.8" fill="#64748b" text-anchor="middle">principal</text>
+<line x1="196" y1="197" x2="390.1" y2="198.6" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="196" y1="197" x2="449.6" y2="273.9" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,197 398,197 398,258 900,258 900,266" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="170" cy="330" r="15" fill="#ffffff" stroke="#0d9488" stroke-width="2"/>
+<line x1="170" y1="345" x2="170" y2="382" stroke="#0d9488" stroke-width="2"/>
+<line x1="148" y1="357" x2="192" y2="357" stroke="#0d9488" stroke-width="2"/>
+<line x1="170" y1="382" x2="152" y2="410" stroke="#0d9488" stroke-width="2"/>
+<line x1="170" y1="382" x2="188" y2="410" stroke="#0d9488" stroke-width="2"/>
+<text x="170" y="430" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Établissement de</text>
+<text x="170" y="445" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">soins</text>
+<text x="170" y="460" font-size="10.8" fill="#64748b" text-anchor="middle">principal</text>
+<polyline points="196,357 398,357 398,246 900,246 900,239" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<line x1="196" y1="357" x2="413.5" y2="326.0" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,357 398,357 398,258 1260,258 1260,239" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="170" cy="520" r="15" fill="#ffffff" stroke="#ea580c" stroke-width="2"/>
+<line x1="170" y1="535" x2="170" y2="572" stroke="#ea580c" stroke-width="2"/>
+<line x1="148" y1="547" x2="192" y2="547" stroke="#ea580c" stroke-width="2"/>
+<line x1="170" y1="572" x2="152" y2="600" stroke="#ea580c" stroke-width="2"/>
+<line x1="170" y1="572" x2="188" y2="600" stroke="#ea580c" stroke-width="2"/>
+<text x="170" y="620" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Gestionnaire de</text>
+<text x="170" y="635" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">banque</text>
+<text x="170" y="650" font-size="10.8" fill="#64748b" text-anchor="middle">principal</text>
+<line x1="196" y1="547" x2="429.6" y2="498.4" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,547 398,547 398,519 900,519 900,511" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,547 398,547 398,531 1260,531 1260,538" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="170" cy="690" r="15" fill="#ffffff" stroke="#d97706" stroke-width="2"/>
+<line x1="170" y1="705" x2="170" y2="742" stroke="#d97706" stroke-width="2"/>
+<line x1="148" y1="717" x2="192" y2="717" stroke="#d97706" stroke-width="2"/>
+<line x1="170" y1="742" x2="152" y2="770" stroke="#d97706" stroke-width="2"/>
+<line x1="170" y1="742" x2="188" y2="770" stroke="#d97706" stroke-width="2"/>
+<text x="170" y="790" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Agent de stock</text>
+<text x="170" y="805" font-size="10.8" fill="#64748b" text-anchor="middle">principal</text>
+<line x1="196" y1="717" x2="464.5" y2="610.7" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,717 398,717 398,519 900,519 900,538" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,717 398,717 398,531 1260,531 1260,511" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="170" cy="860" r="15" fill="#ffffff" stroke="#7c3aed" stroke-width="2"/>
+<line x1="170" y1="875" x2="170" y2="912" stroke="#7c3aed" stroke-width="2"/>
+<line x1="148" y1="887" x2="192" y2="887" stroke="#7c3aed" stroke-width="2"/>
+<line x1="170" y1="912" x2="152" y2="940" stroke="#7c3aed" stroke-width="2"/>
+<line x1="170" y1="912" x2="188" y2="940" stroke="#7c3aed" stroke-width="2"/>
+<text x="170" y="960" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Administrateur</text>
+<text x="170" y="975" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">CNTS</text>
+<text x="170" y="990" font-size="10.8" fill="#64748b" text-anchor="middle">principal</text>
+<line x1="196" y1="887" x2="465.7" y2="777.9" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,887 398,887 398,791 1260,791 1260,783" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<polyline points="196,887 398,887 398,803 900,803 900,810" fill="none" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="170" cy="1020" r="15" fill="#ffffff" stroke="#475569" stroke-width="2"/>
+<line x1="170" y1="1035" x2="170" y2="1072" stroke="#475569" stroke-width="2"/>
+<line x1="148" y1="1047" x2="192" y2="1047" stroke="#475569" stroke-width="2"/>
+<line x1="170" y1="1072" x2="152" y2="1100" stroke="#475569" stroke-width="2"/>
+<line x1="170" y1="1072" x2="188" y2="1100" stroke="#475569" stroke-width="2"/>
+<text x="170" y="1120" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Personnel autorisé</text>
+<text x="170" y="1135" font-size="10.8" fill="#64748b" text-anchor="middle">abstrait</text>
+<polyline points="144,547 78,547 78,1035" fill="none" stroke="#475569" stroke-width="1.3"/>
+<polyline points="144,717 78,717 78,1035" fill="none" stroke="#475569" stroke-width="1.3"/>
+<polyline points="144,887 78,887 78,1035" fill="none" stroke="#475569" stroke-width="1.3"/>
+<line x1="78" y1="1035" x2="150" y2="1035" stroke="#475569" stroke-width="1.4" marker-end="url(#tri)"/>
+<text x="86" y="1070" font-size="10.5" fill="#475569" text-anchor="start" font-style="italic">héritage</text>
+<line x1="196" y1="1047" x2="399.8" y2="1029.9" stroke="#94a3b8" stroke-width="1.2"/>
+<circle cx="1620" cy="190" r="15" fill="#ffffff" stroke="#16a34a" stroke-width="2"/>
+<line x1="1620" y1="205" x2="1620" y2="242" stroke="#16a34a" stroke-width="2"/>
+<line x1="1598" y1="217" x2="1642" y2="217" stroke="#16a34a" stroke-width="2"/>
+<line x1="1620" y1="242" x2="1602" y2="270" stroke="#16a34a" stroke-width="2"/>
+<line x1="1620" y1="242" x2="1638" y2="270" stroke="#16a34a" stroke-width="2"/>
+<text x="1620" y="290" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Service de</text>
+<text x="1620" y="305" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">cartographie</text>
+<text x="1620" y="320" font-size="10.8" fill="#64748b" text-anchor="middle">externe</text>
+<line x1="1594" y1="217" x2="1410" y2="210" stroke="#16a34a" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#flo)"/>
+<text x="1480" y="180" font-size="11" fill="#16a34a" text-anchor="middle" font-style="italic">«use»</text>
+<circle cx="1620" cy="950" r="15" fill="#ffffff" stroke="#2563eb" stroke-width="2"/>
+<line x1="1620" y1="965" x2="1620" y2="1002" stroke="#2563eb" stroke-width="2"/>
+<line x1="1598" y1="977" x2="1642" y2="977" stroke="#2563eb" stroke-width="2"/>
+<line x1="1620" y1="1002" x2="1602" y2="1030" stroke="#2563eb" stroke-width="2"/>
+<line x1="1620" y1="1002" x2="1638" y2="1030" stroke="#2563eb" stroke-width="2"/>
+<text x="1620" y="1050" font-size="12.5" fill="#0f172a" text-anchor="middle" font-weight="700">Service SMS</text>
+<text x="1620" y="1065" font-size="10.8" fill="#64748b" text-anchor="middle">externe</text>
+<polyline points="1594,990 1330,1098 900,1098 900,1055" fill="none" stroke="#2563eb" stroke-width="1.3" stroke-dasharray="6 4" marker-end="url(#flo)"/>
+<text x="1420" y="1012" font-size="11" fill="#2563eb" text-anchor="middle" font-style="italic">«use»</text>
+<line x1="540" y1="270" x2="540" y2="237" stroke="#64748b" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#flo)"/>
+<rect x="510.66625" y="245.5" width="58.667500000000004" height="16" rx="4" fill="#ffffff"/>
+<text x="540.0" y="257.5" font-size="10.5" fill="#64748b" text-anchor="middle">«include»</text>
+<line x1="688" y1="472" x2="750" y2="472" stroke="#64748b" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#flo)"/>
+<rect x="690.66625" y="455" width="58.667500000000004" height="16" rx="4" fill="#ffffff"/>
+<text x="720.0" y="467" font-size="10.5" fill="#64748b" text-anchor="middle">«include»</text>
+<line x1="688" y1="744" x2="750" y2="744" stroke="#64748b" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#flo)"/>
+<rect x="690.66625" y="727" width="58.667500000000004" height="16" rx="4" fill="#ffffff"/>
+<text x="720.0" y="739" font-size="10.5" fill="#64748b" text-anchor="middle">«include»</text>
+<polyline points="1050,1016 1420,1016 1420,379 540,379 540,435" fill="none" stroke="#64748b" stroke-width="1.2" stroke-dasharray="6 4" marker-end="url(#fl)"/>
+<rect x="953.37" y="363" width="53.26" height="16" rx="4" fill="#ffffff"/>
+<text x="980" y="375" font-size="10.5" fill="#64748b" text-anchor="middle">«extend»</text>
+</svg>

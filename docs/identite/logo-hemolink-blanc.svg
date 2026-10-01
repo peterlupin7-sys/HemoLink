@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="530" height="132"
+     viewBox="0 0 530 132" font-family='Nunito, "Trebuchet MS", "Segoe UI", system-ui, sans-serif'>
+<g transform="translate(26,14) scale(0.86)"><path d="M50 6 C50 6 20 44 20 64 a30 30 0 0 0 60 0 C80 44 50 6 50 6 Z" fill="#ffffff"/><path d="M21 66 H35 L41 53 L49 80 L57 61 L63 66 H79" fill="none" stroke="#be123c" stroke-width="6.4" stroke-linecap="round" stroke-linejoin="round"/></g>
+<text x="150" y="70" font-size="42" font-weight="700" letter-spacing="-0.8"
+      fill="#ffffff">Hemo<tspan fill="#fecdd3">Link</tspan></text>
+<text x="152" y="92" font-size="14.5" fill="rgba(255,255,255,.85)">Chaque poche sauve une vie</text></svg>

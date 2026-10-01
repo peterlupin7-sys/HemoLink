@@ -1,0 +1,167 @@
+/* ==========================================================================
+   HemoLink — feuille de style de marque
+   Identité « Pouls » (proposition 2) · charte v2.0 · Octobre 2026
+   À poser dans public/css/hemolink.css et à appeler depuis base.html.twig :
+       <link rel="stylesheet" href="{{ asset('css/hemolink.css') }}">
+   Aucune ressource externe : polices servies depuis public/fonts/.
+   ========================================================================== */
+
+/* --- polices locales (pas de CDN : l’application fonctionne hors ligne) --- */
+@font-face { font-family:'Nunito'; src:url('../fonts/nunito-600.woff2') format('woff2');
+             font-weight:600; font-display:swap; }
+@font-face { font-family:'Nunito'; src:url('../fonts/nunito-700.woff2') format('woff2');
+             font-weight:700; font-display:swap; }
+@font-face { font-family:'Nunito'; src:url('../fonts/nunito-800.woff2') format('woff2');
+             font-weight:800; font-display:swap; }
+@font-face { font-family:'Source Sans 3'; src:url('../fonts/source-sans-400.woff2') format('woff2');
+             font-weight:400; font-display:swap; }
+@font-face { font-family:'Source Sans 3'; src:url('../fonts/source-sans-600.woff2') format('woff2');
+             font-weight:600; font-display:swap; }
+@font-face { font-family:'Source Sans 3'; src:url('../fonts/source-sans-700.woff2') format('woff2');
+             font-weight:700; font-display:swap; }
+
+/* --- variables de la charte ---------------------------------------------- */
+:root{
+  /* marque */
+  --hl-rouge:#be123c;          /* boutons, barre de navigation, mot « Link » */
+  --hl-corail:#fb7185;         /* dégradés, illustrations, accents — jamais du texte */
+  --hl-rouge-profond:#9f1239;  /* état pressé, texte rouge sur fond clair */
+  --hl-rose:#fff5f5;           /* fond des pastilles et des encadrés d’urgence */
+  --hl-rose-trait:#fecdd3;
+  --hl-degrade:linear-gradient(135deg,#fb7185 0%,#be123c 100%);
+  /* sens */
+  --hl-lagon:#0e7490;          /* disponible, confirmation */
+  --hl-lagon-pale:#ecfeff;
+  --hl-terre:#c2410c;          /* tension, péremption proche */
+  --hl-terre-pale:#fff7ed;
+  --hl-rupture:#9f1239;
+  --hl-rupture-pale:#fff5f5;
+  /* neutres chauds */
+  --hl-encre:#1c1917; --hl-texte:#57534e; --hl-gris:#78716c;
+  --hl-trait:#e7e5e4; --hl-fond:#faf7f5; --hl-fond-doux:#f5f5f4; --hl-blanc:#ffffff;
+  /* formes et rythme — l’identité « Pouls » est ronde */
+  --hl-r:16px; --hl-r-carte:22px; --hl-r-pastille:999px; --hl-touche:44px;
+  --hl-ombre:0 1px 2px rgba(28,25,23,.05), 0 6px 20px rgba(28,25,23,.06);
+  --hl-titre:Nunito,"Trebuchet MS","Segoe UI",system-ui,sans-serif;
+  --hl-texte-police:"Source Sans 3","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+}
+
+/* --- base ---------------------------------------------------------------- */
+*{box-sizing:border-box}
+body{margin:0;font-family:var(--hl-texte-police);font-size:16px;line-height:1.6;
+     color:var(--hl-texte);background:var(--hl-fond);-webkit-font-smoothing:antialiased}
+h1,h2,h3,.hl-nombre{font-family:var(--hl-titre);color:var(--hl-encre);letter-spacing:-.4px}
+h1{font-size:28px;font-weight:800;margin:0 0 14px}
+h2{font-size:21px;font-weight:700;margin:26px 0 10px}
+h3{font-size:17px;font-weight:700;margin:20px 0 8px}
+a{color:var(--hl-rouge);text-decoration:none;font-weight:600}
+a:hover{text-decoration:underline}
+small,.hl-legende{font-size:13.5px;color:var(--hl-gris)}
+.hl-etiquette{font-size:11.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+     color:var(--hl-gris)}
+.hl-nombre{font-size:36px;font-weight:800;font-variant-numeric:tabular-nums}
+.hl-num{font-variant-numeric:tabular-nums}
+.hl-reference{font-family:"Consolas","SF Mono",monospace;text-transform:uppercase;
+     white-space:nowrap;color:var(--hl-encre);letter-spacing:.02em}
+
+/* --- barre de navigation -------------------------------------------------- */
+.hl-nav{background:var(--hl-degrade);color:#fff;padding:12px 20px;display:flex;
+        align-items:center;gap:18px;font-family:var(--hl-titre)}
+.hl-nav img{height:36px}
+.hl-nav a{color:rgba(255,255,255,.92);font-weight:600}
+.hl-nav a.actif{color:#fff;text-decoration:underline;text-underline-offset:5px}
+
+/* --- boutons (hauteur mini 44 px : utilisable au pouce) -------------------- */
+.hl-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    min-height:var(--hl-touche);padding:11px 22px;border-radius:var(--hl-r);
+    font-family:var(--hl-texte-police);font-size:16px;font-weight:700;
+    border:2px solid transparent;cursor:pointer;transition:background .15s,border-color .15s}
+.hl-btn--primaire{background:var(--hl-rouge);color:#fff}
+.hl-btn--primaire:hover{background:var(--hl-rouge-profond)}
+.hl-btn--valider{background:var(--hl-lagon);color:#fff}
+.hl-btn--secondaire{background:#fff;color:var(--hl-rouge);border-color:var(--hl-rouge)}
+.hl-btn--secondaire:hover{background:var(--hl-rose)}
+.hl-btn--neutre{background:#fff;color:var(--hl-texte);border-color:var(--hl-trait)}
+.hl-btn[disabled],.hl-btn--desactive{background:var(--hl-fond-doux);color:#a8a29e;
+    cursor:not-allowed}
+.hl-btn:focus-visible{outline:3px solid var(--hl-corail);outline-offset:2px}
+
+/* --- cartes --------------------------------------------------------------- */
+.hl-carte{background:#fff;border:1px solid var(--hl-trait);border-radius:var(--hl-r-carte);
+    padding:18px 20px;box-shadow:var(--hl-ombre)}
+.hl-carte__titre{font-family:var(--hl-titre);font-size:17px;font-weight:700;
+    color:var(--hl-encre)}
+.hl-carte__meta{font-size:13.5px;color:var(--hl-gris);margin-top:2px}
+
+/* --- état d’un stock : jamais la couleur seule, toujours le mot et le nombre */
+.hl-etat{display:inline-flex;align-items:center;gap:7px;padding:5px 12px;
+    border-radius:var(--hl-r-pastille);font-size:13.5px;font-weight:700;border:1px solid}
+.hl-etat::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.hl-etat--disponible{color:var(--hl-lagon);background:var(--hl-lagon-pale);
+    border-color:rgba(14,116,144,.3)}
+.hl-etat--tension{color:var(--hl-terre);background:var(--hl-terre-pale);
+    border-color:rgba(194,65,12,.3)}
+.hl-etat--rupture{color:var(--hl-rupture);background:var(--hl-rupture-pale);
+    border-color:var(--hl-rose-trait)}
+.hl-etat--inconnu{color:var(--hl-texte);background:var(--hl-fond-doux);
+    border-color:var(--hl-trait)}
+
+/* --- pastille de groupe sanguin ------------------------------------------- */
+.hl-groupe{display:inline-flex;align-items:center;justify-content:center;min-width:48px;
+    height:48px;padding:0 11px;border-radius:15px;background:var(--hl-rose);
+    color:var(--hl-rouge);border:1px solid var(--hl-rose-trait);font-family:var(--hl-titre);
+    font-weight:800;font-size:17px;white-space:nowrap}
+.hl-groupe--petit{min-width:36px;height:32px;font-size:14px;border-radius:11px}
+
+/* --- tableaux de stock ----------------------------------------------------- */
+.hl-table{width:100%;border-collapse:collapse;font-size:15px;background:#fff}
+.hl-table th{background:var(--hl-rouge);color:#fff;text-align:left;padding:11px 13px;
+    font-family:var(--hl-titre);font-size:14px;font-weight:700}
+.hl-table th:first-child{border-top-left-radius:var(--hl-r)}
+.hl-table th:last-child{border-top-right-radius:var(--hl-r)}
+.hl-table td{padding:11px 13px;border-bottom:1px solid var(--hl-trait);
+    font-variant-numeric:tabular-nums}
+.hl-table tbody tr:nth-child(even) td{background:var(--hl-fond)}
+
+/* --- formulaires ----------------------------------------------------------- */
+.hl-champ{display:block;width:100%;min-height:var(--hl-touche);padding:11px 14px;
+    border:2px solid var(--hl-trait);border-radius:var(--hl-r);
+    font-family:var(--hl-texte-police);font-size:16px;color:var(--hl-encre);background:#fff}
+.hl-champ:focus{border-color:var(--hl-rouge);outline:3px solid var(--hl-corail);
+    outline-offset:1px}
+.hl-label{display:block;font-weight:700;color:var(--hl-encre);margin-bottom:5px}
+.hl-aide{font-size:13.5px;color:var(--hl-gris);margin-top:4px}
+.hl-erreur{font-size:14px;color:var(--hl-rupture);margin-top:4px;font-weight:600}
+
+/* --- messages -------------------------------------------------------------- */
+.hl-message{border-radius:var(--hl-r);padding:14px 17px;border:1px solid;margin:12px 0;
+    font-size:15px}
+.hl-message--succes{background:var(--hl-lagon-pale);border-color:rgba(14,116,144,.35);
+    color:var(--hl-lagon)}
+.hl-message--alerte{background:var(--hl-terre-pale);border-color:rgba(194,65,12,.35);
+    color:var(--hl-terre)}
+.hl-message--urgence{background:var(--hl-rose);border-color:var(--hl-rose-trait);
+    color:var(--hl-rouge)}
+
+/* --- carte géographique ----------------------------------------------------- */
+.hl-carte-geo{border-radius:var(--hl-r-carte);overflow:hidden;border:1px solid var(--hl-trait)}
+.hl-marqueur{width:34px;height:40px}           /* marqueur-carte.svg */
+.hl-marqueur--tension{width:34px;height:40px}  /* marqueur-carte-tension.svg */
+.hl-marqueur--rupture{width:34px;height:40px}  /* marqueur-carte-rupture.svg */
+
+/* --- accessibilité et lecture sur téléphone --------------------------------- */
+@media (max-width:640px){
+  body{font-size:16.5px}
+  .hl-btn{width:100%}
+  h1{font-size:25px}
+}
+@media (prefers-reduced-motion:reduce){ *{transition:none !important} }
+
+/* --- impression : bon de retrait en noir et blanc --------------------------- */
+@media print{
+  body{background:#fff;font-size:11pt;color:#000}
+  .hl-nav,.hl-btn{display:none}
+  .hl-carte{box-shadow:none;border-color:#78716c;border-radius:4px}
+  .hl-table th{background:#fff;color:#000;border-bottom:2px solid #000}
+  .hl-etat{border-color:#000;color:#000;background:#fff}
+}

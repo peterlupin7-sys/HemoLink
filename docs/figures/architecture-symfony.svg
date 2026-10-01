@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1080" viewBox="0 0 1700 1080" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect width="1700" height="1080" fill="#f8fafc"/>
+<defs><marker id="fl" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#64748b"/></marker><marker id="flr" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#be123c"/></marker><marker id="flo" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="none" stroke="#64748b" stroke-width="1.4"/></marker><marker id="tri" markerWidth="14" markerHeight="14" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#fff" stroke="#64748b" stroke-width="1.4"/></marker><marker id="dia" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#64748b"/></marker><marker id="diav" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#fff" stroke="#64748b" stroke-width="1.3"/></marker><marker id="pt" markerWidth="8" markerHeight="8" refX="4" refY="4"><circle cx="4" cy="4" r="3.4" fill="#0f172a"/></marker></defs>
+<text x="40" y="40" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">HemoLink v1.0 — Architecture technique (Symfony)</text>
+<text x="1660" y="40" font-size="12.5" fill="#64748b" text-anchor="end">Modèle en couches · MVC Symfony + Doctrine ORM · fonctionnement local</text>
+<rect x="60" y="80" width="1580" height="150" rx="14" fill="#ecfeff" stroke="#0891b2" stroke-width="1.6"/>
+<text x="80" y="108" font-size="12.8" fill="#0891b2" text-anchor="start" font-weight="700">POSTE CLIENT — navigateur</text>
+<rect x="90" y="130" width="330" height="34" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="1.4"/>
+<text x="255.0" y="152" font-size="10.8" fill="#0f172a" text-anchor="middle">Demandeur sur téléphone (carte plein écran)</text>
+<rect x="450" y="130" width="330" height="34" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="1.4"/>
+<text x="615.0" y="152" font-size="10.8" fill="#0f172a" text-anchor="middle">Gestionnaire de banque (poste de bureau)</text>
+<rect x="810" y="130" width="300" height="34" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="1.4"/>
+<text x="960.0" y="152" font-size="10.8" fill="#0f172a" text-anchor="middle">Agent de stock (poste de bureau)</text>
+<rect x="1140" y="130" width="470" height="34" rx="8" fill="#ffffff" stroke="#0891b2" stroke-width="1.4"/>
+<text x="1375.0" y="152" font-size="10.8" fill="#0f172a" text-anchor="middle">Administrateur CNTS (vue réseau)</text>
+<text x="90" y="198" font-size="10.6" fill="#475569" text-anchor="start">Pages HTML générées par Twig · CSS maison · JavaScript natif · bibliothèque de carte et tuiles OpenStreetMap embarquées (aucun CDN)</text>
+<rect x="60" y="270" width="1580" height="530" rx="16" fill="#ffffff" stroke="#be123c" stroke-width="2"/>
+<text x="80" y="300" font-size="13.2" fill="#be123c" text-anchor="start" font-weight="700">SERVEUR LOCAL — Apache (XAMPP) + PHP 8.2</text>
+<text x="1620" y="300" font-size="11.5" fill="#64748b" text-anchor="end" font-style="italic">application Symfony</text>
+<rect x="90" y="325" width="480" height="150" rx="12" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="106" y="351" font-size="12.8" fill="#7c3aed" text-anchor="start" font-weight="700">Couche présentation</text>
+<text x="106" y="373" font-size="10.6" fill="#475569" text-anchor="start">Routing et Controller : Banque, Stock, Precommande,</text>
+<text x="106" y="390" font-size="10.6" fill="#475569" text-anchor="start">Admin, Securite</text>
+<text x="106" y="407" font-size="10.6" fill="#475569" text-anchor="start">Formulaires : Form + Validator (contrôles serveur)</text>
+<text x="106" y="424" font-size="10.6" fill="#475569" text-anchor="start">Vues : Twig + composants réutilisables</text>
+<text x="106" y="441" font-size="10.6" fill="#475569" text-anchor="start">Points JSON pour la carte (fetch)</text>
+<rect x="610" y="325" width="480" height="150" rx="12" fill="#fff7ed" stroke="#ea580c" stroke-width="1.6"/>
+<text x="626" y="351" font-size="12.8" fill="#ea580c" text-anchor="start" font-weight="700">Couche métier (services)</text>
+<text x="626" y="373" font-size="10.6" fill="#475569" text-anchor="start">GeolocalisationService — distances (Haversine)</text>
+<text x="626" y="390" font-size="10.6" fill="#475569" text-anchor="start">StockService — réservation, libération, seuils</text>
+<text x="626" y="407" font-size="10.6" fill="#475569" text-anchor="start">NumerotationService — PRE-COT-2026-00001</text>
+<text x="626" y="424" font-size="10.6" fill="#475569" text-anchor="start">CompatibiliteService — groupes ABO / Rhésus</text>
+<text x="626" y="441" font-size="10.6" fill="#475569" text-anchor="start">SmsNotifier — messages au demandeur</text>
+<rect x="1130" y="325" width="480" height="150" rx="12" fill="#f0fdfa" stroke="#0d9488" stroke-width="1.6"/>
+<text x="1146" y="351" font-size="12.8" fill="#0d9488" text-anchor="start" font-weight="700">Couche accès aux données</text>
+<text x="1146" y="373" font-size="10.6" fill="#475569" text-anchor="start">Doctrine ORM : 14 entités mappées</text>
+<text x="1146" y="390" font-size="10.6" fill="#475569" text-anchor="start">Repositories : requêtes DQL et SQL natives</text>
+<text x="1146" y="407" font-size="10.6" fill="#475569" text-anchor="start">Migrations : création et évolution du schéma</text>
+<text x="1146" y="424" font-size="10.6" fill="#475569" text-anchor="start">Fixtures : jeu de données de démonstration</text>
+<text x="1146" y="441" font-size="10.6" fill="#475569" text-anchor="start">Transactions et verrou pessimiste sur le compteur</text>
+<rect x="90" y="500" width="480" height="130" rx="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.6"/>
+<text x="106" y="526" font-size="12.8" fill="#2563eb" text-anchor="start" font-weight="700">Sécurité</text>
+<text x="106" y="548" font-size="10.6" fill="#475569" text-anchor="start">Firewall et authentification par formulaire</text>
+<text x="106" y="565" font-size="10.6" fill="#475569" text-anchor="start">Rôles : ROLE_ADMIN, ROLE_GESTIONNAIRE,</text>
+<text x="106" y="582" font-size="10.6" fill="#475569" text-anchor="start">ROLE_AGENT · Voters pour l’accès par banque</text>
+<text x="106" y="599" font-size="10.6" fill="#475569" text-anchor="start">Hachage des mots de passe · protection CSRF</text>
+<rect x="610" y="500" width="480" height="130" rx="12" fill="#fffbeb" stroke="#d97706" stroke-width="1.6"/>
+<text x="626" y="526" font-size="12.8" fill="#d97706" text-anchor="start" font-weight="700">Tâches et messages</text>
+<text x="626" y="548" font-size="10.6" fill="#475569" text-anchor="start">Messenger : file d’attente des SMS,</text>
+<text x="626" y="565" font-size="10.6" fill="#475569" text-anchor="start">réémission après une coupure réseau</text>
+<text x="626" y="582" font-size="10.6" fill="#475569" text-anchor="start">Console : app:sauvegarde, app:alerte-peremption</text>
+<text x="626" y="599" font-size="10.6" fill="#475569" text-anchor="start">Planification quotidienne (tâche programmée)</text>
+<rect x="1130" y="500" width="480" height="130" rx="12" fill="#f1f5f9" stroke="#475569" stroke-width="1.6"/>
+<text x="1146" y="526" font-size="12.8" fill="#475569" text-anchor="start" font-weight="700">Qualité et exploitation</text>
+<text x="1146" y="548" font-size="10.6" fill="#475569" text-anchor="start">PHPUnit : tests des services critiques</text>
+<text x="1146" y="565" font-size="10.6" fill="#475569" text-anchor="start">Monolog : journal des actions sensibles</text>
+<text x="1146" y="582" font-size="10.6" fill="#475569" text-anchor="start">Profiler en développement</text>
+<text x="1146" y="599" font-size="10.6" fill="#475569" text-anchor="start">Variables d’environnement (.env)</text>
+<rect x="90" y="655" width="1520" height="120" rx="12" fill="#f0fdf4" stroke="#16a34a" stroke-width="1.6"/>
+<text x="110" y="682" font-size="12.4" fill="#16a34a" text-anchor="start" font-weight="700">Fonctionnement hors ligne</text>
+<text x="110" y="706" font-size="10.6" fill="#475569" text-anchor="start">• Tout est installé en local : aucune requête vers un service en ligne n’est nécessaire pour afficher la carte ou consulter un stock.</text>
+<text x="110" y="725" font-size="10.6" fill="#475569" text-anchor="start">• Si les tuiles de carte manquent, l’application bascule automatiquement sur la liste des banques triées par distance.</text>
+<text x="110" y="744" font-size="10.6" fill="#475569" text-anchor="start">• Les SMS non partis sont conservés dans la file Messenger et envoyés dès le retour du réseau.</text>
+<rect x="60" y="840" width="760" height="190" rx="14" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+<text x="80" y="870" font-size="12.4" fill="#7c3aed" text-anchor="start" font-weight="700">BASE DE DONNÉES — MySQL / MariaDB (InnoDB, utf8mb4)</text>
+<rect x="85" y="890" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="155" y="911" font-size="10" fill="#0f172a" text-anchor="middle">banque</text>
+<rect x="233" y="890" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="303" y="911" font-size="10" fill="#0f172a" text-anchor="middle">utilisateur</text>
+<rect x="381" y="890" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="451" y="911" font-size="10" fill="#0f172a" text-anchor="middle">groupe_sanguin</text>
+<rect x="529" y="890" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="599" y="911" font-size="10" fill="#0f172a" text-anchor="middle">compatibilite</text>
+<rect x="677" y="890" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="747" y="911" font-size="10" fill="#0f172a" text-anchor="middle">stock</text>
+<rect x="85" y="932" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="155" y="953" font-size="10" fill="#0f172a" text-anchor="middle">poche</text>
+<rect x="233" y="932" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="303" y="953" font-size="10" fill="#0f172a" text-anchor="middle">demandeur</text>
+<rect x="381" y="932" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="451" y="953" font-size="10" fill="#0f172a" text-anchor="middle">precommande</text>
+<rect x="529" y="932" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="599" y="953" font-size="10" fill="#0f172a" text-anchor="middle">ligne_precommande</text>
+<rect x="677" y="932" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="747" y="953" font-size="10" fill="#0f172a" text-anchor="middle">mouvement_stock</text>
+<rect x="85" y="974" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="155" y="995" font-size="10" fill="#0f172a" text-anchor="middle">notification_sms</text>
+<rect x="233" y="974" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="303" y="995" font-size="10" fill="#0f172a" text-anchor="middle">compteur</text>
+<rect x="381" y="974" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="451" y="995" font-size="10" fill="#0f172a" text-anchor="middle">journal</text>
+<rect x="529" y="974" width="140" height="32" rx="7" fill="#ffffff" stroke="#7c3aed" stroke-width="1.2"/>
+<text x="599" y="995" font-size="10" fill="#0f172a" text-anchor="middle">parametre</text>
+<rect x="880" y="840" width="760" height="190" rx="14" fill="#f1f5f9" stroke="#475569" stroke-width="1.6"/>
+<text x="900" y="870" font-size="12.4" fill="#475569" text-anchor="start" font-weight="700">SERVICES EXTERNES</text>
+<rect x="900" y="886" width="350" height="125" rx="12" fill="#ffffff" stroke="#2563eb" stroke-width="1.6"/>
+<text x="916" y="912" font-size="12.8" fill="#2563eb" text-anchor="start" font-weight="700">Passerelle SMS</text>
+<text x="916" y="934" font-size="10.6" fill="#475569" text-anchor="start">Appelée par SmsNotifier via HttpClient</text>
+<text x="916" y="951" font-size="10.6" fill="#475569" text-anchor="start">Confirmation de précommande</text>
+<text x="916" y="968" font-size="10.6" fill="#475569" text-anchor="start">Avis de mise à disposition des poches</text>
+<text x="916" y="985" font-size="10.6" fill="#475569" text-anchor="start">Rejouée automatiquement après coupure</text>
+<rect x="1270" y="886" width="350" height="125" rx="12" fill="#ffffff" stroke="#16a34a" stroke-width="1.6"/>
+<text x="1286" y="912" font-size="12.8" fill="#16a34a" text-anchor="start" font-weight="700">Fond de carte</text>
+<text x="1286" y="934" font-size="10.6" fill="#475569" text-anchor="start">OpenStreetMap, tuiles stockées en local</text>
+<text x="1286" y="951" font-size="10.6" fill="#475569" text-anchor="start">Aucune clé d’API, aucune dépendance CDN</text>
+<text x="1286" y="968" font-size="10.6" fill="#475569" text-anchor="start">Repli sur la liste triée par distance</text>
+<text x="1286" y="985" font-size="10.6" fill="#475569" text-anchor="start">Coordonnées GPS saisies par l’administrateur</text>
+<line x1="400" y1="230" x2="400" y2="268" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="400" y1="268" x2="400" y2="230" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="850" y1="230" x2="850" y2="268" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="850" y1="268" x2="850" y2="230" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="1300" y1="230" x2="1300" y2="268" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="1300" y1="268" x2="1300" y2="230" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="420" y1="800" x2="420" y2="838" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="420" y1="838" x2="420" y2="800" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<line x1="1260" y1="800" x2="1260" y2="838" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<text x="440" y="824" font-size="10.4" fill="#64748b" text-anchor="start">Doctrine DBAL / PDO</text>
+<text x="1280" y="824" font-size="10.4" fill="#64748b" text-anchor="start">HTTP sortant (SMS) · fichiers locaux (tuiles)</text>
+</svg>

@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1780" viewBox="0 0 1700 1780" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+<rect width="1700" height="1780" fill="#f8fafc"/>
+<defs><marker id="fl" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#64748b"/></marker><marker id="flr" markerWidth="10" markerHeight="10" refX="9" refY="3.2" orient="auto"><path d="M0,0 L9,3.2 L0,6.4 z" fill="#be123c"/></marker><marker id="flo" markerWidth="12" markerHeight="12" refX="10" refY="4" orient="auto"><path d="M0,0 L10,4 L0,8" fill="none" stroke="#64748b" stroke-width="1.4"/></marker><marker id="tri" markerWidth="14" markerHeight="14" refX="12" refY="6" orient="auto"><path d="M0,0 L12,6 L0,12 z" fill="#fff" stroke="#64748b" stroke-width="1.4"/></marker><marker id="dia" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#64748b"/></marker><marker id="diav" markerWidth="16" markerHeight="12" refX="1" refY="6" orient="auto"><path d="M0,6 L7,1 L14,6 L7,11 z" fill="#fff" stroke="#64748b" stroke-width="1.3"/></marker><marker id="pt" markerWidth="8" markerHeight="8" refX="4" refY="4"><circle cx="4" cy="4" r="3.4" fill="#0f172a"/></marker></defs>
+<text x="40" y="40" font-size="22" fill="#0f172a" text-anchor="start" font-weight="700">HemoLink v1.0 — Diagramme d’activité</text>
+<text x="1660" y="40" font-size="12.5" fill="#64748b" text-anchor="end">Du besoin de sang au retrait des poches · 4 couloirs · 2 points de décision</text>
+<rect x="40" y="80" width="420" height="1640" rx="0" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+<rect x="40" y="80" width="420" height="42" rx="0" fill="#0891b2"/>
+<text x="250.0" y="108" font-size="13.5" fill="#ffffff" text-anchor="middle" font-weight="700">Demandeur</text>
+<rect x="460" y="80" width="460" height="1640" rx="0" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+<rect x="460" y="80" width="460" height="42" rx="0" fill="#be123c"/>
+<text x="690.0" y="108" font-size="13.5" fill="#ffffff" text-anchor="middle" font-weight="700">Plateforme HemoLink</text>
+<rect x="920" y="80" width="420" height="1640" rx="0" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+<rect x="920" y="80" width="420" height="42" rx="0" fill="#ea580c"/>
+<text x="1130.0" y="108" font-size="13.5" fill="#ffffff" text-anchor="middle" font-weight="700">Gestionnaire de banque</text>
+<rect x="1340" y="80" width="320" height="1640" rx="0" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+<rect x="1340" y="80" width="320" height="42" rx="0" fill="#d97706"/>
+<text x="1500.0" y="108" font-size="13.5" fill="#ffffff" text-anchor="middle" font-weight="700">Agent de stock</text>
+<circle cx="250" cy="170" r="15" fill="#0f172a" stroke="#0f172a" stroke-width="0"/>
+<rect x="85.0" y="219.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#0891b2" stroke-width="1.7"/>
+<text x="250" y="254" font-size="12.3" fill="#0f172a" text-anchor="middle">Ouvrir la carte des banques de sang</text>
+<rect x="525.0" y="219.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="245" font-size="12.3" fill="#0f172a" text-anchor="middle">Détecter la position et calculer les</text>
+<text x="690" y="262" font-size="12.3" fill="#0f172a" text-anchor="middle">distances</text>
+<rect x="525.0" y="329.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="355" font-size="12.3" fill="#0f172a" text-anchor="middle">Afficher les banques triées par</text>
+<text x="690" y="372" font-size="12.3" fill="#0f172a" text-anchor="middle">distance</text>
+<rect x="85.0" y="439.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#0891b2" stroke-width="1.7"/>
+<text x="250" y="465" font-size="12.3" fill="#0f172a" text-anchor="middle">Choisir une banque et un groupe</text>
+<text x="250" y="482" font-size="12.3" fill="#0f172a" text-anchor="middle">sanguin</text>
+<rect x="525.0" y="549.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="584" font-size="12.3" fill="#0f172a" text-anchor="middle">Interroger le stock en temps réel</text>
+<path d="M595,690 L690,642 L785,690 L690,738 z" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="686" font-size="12.3" fill="#0f172a" text-anchor="middle">Stock</text>
+<text x="690" y="702" font-size="12.3" fill="#0f172a" text-anchor="middle">suffisant ?</text>
+<rect x="525.0" y="779.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="805" font-size="12.3" fill="#0f172a" text-anchor="middle">Proposer les groupes compatibles et</text>
+<text x="690" y="822" font-size="12.3" fill="#0f172a" text-anchor="middle">les banques voisines</text>
+<rect x="85.0" y="899.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#0891b2" stroke-width="1.7"/>
+<text x="250" y="925" font-size="12.3" fill="#0f172a" text-anchor="middle">Saisir la quantité et la date de</text>
+<text x="250" y="942" font-size="12.3" fill="#0f172a" text-anchor="middle">retrait</text>
+<rect x="525.0" y="1009.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="1035" font-size="12.3" fill="#0f172a" text-anchor="middle">Générer le numéro PRE-COT-2026-00001</text>
+<text x="690" y="1052" font-size="12.3" fill="#0f172a" text-anchor="middle">et réserver les poches</text>
+<rect x="525.0" y="1119.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="1145" font-size="12.3" fill="#0f172a" text-anchor="middle">Alerter la banque et envoyer le SMS</text>
+<text x="690" y="1162" font-size="12.3" fill="#0f172a" text-anchor="middle">de confirmation</text>
+<rect x="970.0" y="1229.0" width="320" height="62" rx="14" fill="#ffffff" stroke="#ea580c" stroke-width="1.7"/>
+<text x="1130" y="1255" font-size="12.3" fill="#0f172a" text-anchor="middle">Vérifier la précommande et le stock</text>
+<text x="1130" y="1272" font-size="12.3" fill="#0f172a" text-anchor="middle">réel</text>
+<path d="M1035,1380 L1130,1332 L1225,1380 L1130,1428 z" fill="#ffffff" stroke="#ea580c" stroke-width="1.7"/>
+<text x="1130" y="1376" font-size="11.8" fill="#0f172a" text-anchor="middle">Précommande</text>
+<text x="1130" y="1392" font-size="11.8" fill="#0f172a" text-anchor="middle">validée ?</text>
+<rect x="970.0" y="1589.0" width="320" height="62" rx="14" fill="#ffffff" stroke="#ea580c" stroke-width="1.7"/>
+<text x="1130" y="1615" font-size="12.3" fill="#0f172a" text-anchor="middle">Refuser et libérer les poches</text>
+<text x="1130" y="1632" font-size="12.3" fill="#0f172a" text-anchor="middle">réservées</text>
+<rect x="1355.0" y="1229.0" width="290" height="62" rx="14" fill="#ffffff" stroke="#d97706" stroke-width="1.7"/>
+<text x="1500" y="1255" font-size="12.3" fill="#0f172a" text-anchor="middle">Préparer les poches et contrôler la</text>
+<text x="1500" y="1272" font-size="12.3" fill="#0f172a" text-anchor="middle">péremption</text>
+<rect x="1355.0" y="1369.0" width="290" height="62" rx="14" fill="#ffffff" stroke="#d97706" stroke-width="1.7"/>
+<text x="1500" y="1404" font-size="12.3" fill="#0f172a" text-anchor="middle">Enregistrer la sortie de stock</text>
+<rect x="525.0" y="1479.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#be123c" stroke-width="1.7"/>
+<text x="690" y="1505" font-size="12.3" fill="#0f172a" text-anchor="middle">Mettre à jour le stock et notifier «</text>
+<text x="690" y="1522" font-size="12.3" fill="#0f172a" text-anchor="middle">prêt au retrait »</text>
+<rect x="85.0" y="1589.0" width="330" height="62" rx="14" fill="#ffffff" stroke="#0891b2" stroke-width="1.7"/>
+<text x="250" y="1615" font-size="12.3" fill="#0f172a" text-anchor="middle">Retirer les poches et signer le</text>
+<text x="250" y="1632" font-size="12.3" fill="#0f172a" text-anchor="middle">registre</text>
+<circle cx="690" cy="1660" r="17" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
+<circle cx="690" cy="1660" r="11" fill="#0f172a" stroke="#0f172a" stroke-width="0"/>
+<polyline points="250,185 250,219" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="415,250 525,250" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="690,281 690,329" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="525,360 250,360 250,439" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="415,470 690,470 690,549" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="690,611 690,642" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="690,738 690,779" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="710.5025" y="751" width="26.995" height="16" rx="4" fill="#ffffff"/>
+<text x="724" y="763" font-size="11" fill="#be123c" text-anchor="middle">non</text>
+<polyline points="785,690 920,690 920,880 250,880 250,897" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="826.5025" y="671" width="26.995" height="16" rx="4" fill="#ffffff"/>
+<text x="840" y="683" font-size="11" fill="#be123c" text-anchor="middle">oui</text>
+<polyline points="525,810 250,810 250,501" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="255.869" y="791" width="108.262" height="16" rx="4" fill="#ffffff"/>
+<text x="310" y="803" font-size="10.6" fill="#64748b" text-anchor="middle">nouvelle recherche</text>
+<polyline points="250,961 250,1000 690,1000 690,1007" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="690,1071 690,1119" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="855,1150 1130,1150 1130,1229" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="1130,1291 1130,1332" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="1130,1428 1130,1589" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="1150.5025" y="1459" width="26.995" height="16" rx="4" fill="#ffffff"/>
+<text x="1164" y="1471" font-size="11" fill="#ea580c" text-anchor="middle">non</text>
+<polyline points="1225,1380 1360,1380 1360,1260 1355,1260" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<rect x="1276.5025" y="1361" width="26.995" height="16" rx="4" fill="#ffffff"/>
+<text x="1290" y="1373" font-size="11" fill="#ea580c" text-anchor="middle">oui</text>
+<polyline points="1500,1291 1500,1369" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="1500,1431 1500,1510 855,1510" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="525,1510 250,1510 250,1589" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="250,1651 250,1716 690,1716 690,1679" fill="none" stroke="#94a3b8" stroke-width="1.6" marker-end="url(#fl)"/>
+<polyline points="1130,1651 1130,1716 690,1716" fill="none" stroke="#94a3b8" stroke-width="1.6"/>
+</svg>
