@@ -1,0 +1,48 @@
+name: Intégration continue
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    name: PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ['8.1', '8.2', '8.3']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ctype, iconv, intl, json, pdo_mysql
+          coverage: none
+
+      - name: Vérifier la syntaxe PHP
+        run: find src tests -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      - name: Mettre en cache les dépendances
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: ${{ runner.os }}-php${{ matrix.php }}-${{ hashFiles('composer.json') }}
+
+      - name: Installer les dépendances
+        run: composer install --prefer-dist --no-progress --no-interaction
+
+      - name: Valider les gabarits Twig
+        run: php bin/console lint:twig templates --env=test
+
+      - name: Valider la configuration YAML
+        run: php bin/console lint:yaml config --env=test
+
+      - name: Lancer les tests
+        run: vendor/bin/phpunit
