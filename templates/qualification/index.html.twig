@@ -1,0 +1,113 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Qualification des produits sanguins{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Personnel habilité</p>
+            <h1>Qualification des produits sanguins</h1>
+        </div>
+    </header>
+
+    <p class="chapeau">
+        Un don n’entre au stock qu’après votre validation. Tant qu’une qualification
+        n’est pas prononcée, aucune poche n’existe et rien ne peut être réservé.
+    </p>
+
+    <section class="indicateurs">
+        <div class="indicateur {{ file|length > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ file|length }}</span>
+            <span class="libelle">don(s) en attente</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ totaux['CONFORME']|default(0) }}</span>
+            <span class="libelle">conformes, mis en stock</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ totaux['NON_CONFORME']|default(0) }}</span>
+            <span class="libelle">écartés</span>
+        </div>
+    </section>
+
+    <section class="bloc">
+        <h2>Dons à qualifier</h2>
+
+        {% if file is empty %}
+            <p class="vide">Aucun don en attente. Le laboratoire est à jour.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Don</th>
+                        <th scope="col">Donneur</th>
+                        <th scope="col">Prélevé le</th>
+                        <th scope="col">Hémoglobine</th>
+                        <th scope="col">Groupe présumé</th>
+                        <th scope="col"></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for don in file %}
+                        <tr>
+                            <th scope="row"><code>{{ don.codeDon }}</code></th>
+                            <td>{{ don.donneur.nomComplet }}</td>
+                            <td>{{ don.dateDon|date('d/m/Y à H:i') }}</td>
+                            <td class="nombre">{{ don.hemoglobine ? don.hemoglobine ~ ' g/dL' : '—' }}</td>
+                            <td>{{ don.groupeSanguin ? don.groupeSanguin.code : 'à déterminer' }}</td>
+                            <td>
+                                <a class="bouton bouton-principal"
+                                   href="{{ path('qualification_don', {id: don.id}) }}">Qualifier</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+
+    <section class="bloc">
+        <h2>Dernières qualifications prononcées</h2>
+
+        {% if dernieres is empty %}
+            <p class="vide">Aucune qualification enregistrée pour le moment.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Don</th>
+                        <th scope="col">Résultat</th>
+                        <th scope="col">Poche créée</th>
+                        <th scope="col">Prononcée par</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for qualification in dernieres %}
+                        <tr>
+                            <th scope="row">{{ qualification.dateQualification|date('d/m/Y H:i') }}</th>
+                            <td><code>{{ qualification.don.codeDon }}</code></td>
+                            <td>
+                                <span class="pastille {{ qualification.estConforme ? 'etat-disponible' : 'etat-rupture' }}">
+                                    {{ qualification.estConforme ? 'Conforme' : 'Non conforme' }}
+                                </span>
+                                {% if qualification.motifRejet %}
+                                    <span class="muet">{{ qualification.motifRejet }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if qualification.poche %}
+                                    <code>{{ qualification.poche.codePoche }}</code>
+                                {% else %}
+                                    <span class="muet">aucune — produit écarté</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ qualification.personnel.prenom }} {{ qualification.personnel.nom }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+{% endblock %}

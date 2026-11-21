@@ -18,6 +18,24 @@ class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
     public const ROLE_GESTIONNAIRE = 'ROLE_GESTIONNAIRE';
     public const ROLE_AGENT = 'ROLE_AGENT';
 
+    /**
+     * Personnel habilité : il qualifie et valide les produits sanguins.
+     * Rôle volontairement distinct du gestionnaire — qualifier n'est pas gérer
+     * un stock, et un gestionnaire n'a aucune raison de signer une analyse.
+     */
+    public const ROLE_PERSONNEL = 'ROLE_PERSONNEL';
+
+    /** Donneur disposant d'un compte pour prendre ses rendez-vous. */
+    public const ROLE_DONNEUR = 'ROLE_DONNEUR';
+
+    public const LIBELLES_ROLES = [
+        self::ROLE_ADMIN => 'Administrateur',
+        self::ROLE_GESTIONNAIRE => 'Gestionnaire de banque',
+        self::ROLE_AGENT => 'Agent de stock',
+        self::ROLE_PERSONNEL => 'Personnel habilité',
+        self::ROLE_DONNEUR => 'Donneur',
+    ];
+
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

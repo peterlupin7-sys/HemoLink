@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Prendre rendez-vous pour donner{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Espace donneur</p>
+            <h1>Créneaux disponibles</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('espace_donneur') }}">Mes rendez-vous</a>
+            <a class="actif" href="{{ path('espace_donneur_creneaux') }}">Prendre rendez-vous</a>
+        </nav>
+    </header>
+
+    {% if blocage %}
+        <div class="alerte alerte-erreur" role="status">{{ blocage }}</div>
+    {% else %}
+        <p class="chapeau">
+            Choisissez l’horaire qui vous arrange. La place est bloquée dès la confirmation
+            et un SMS vous rappelle le rendez-vous.
+        </p>
+    {% endif %}
+
+    <form method="get" action="{{ path('espace_donneur_creneaux') }}" class="filtres">
+        <label for="banque">Banque de sang</label>
+        <select id="banque" name="banque">
+            <option value="">Toutes les banques</option>
+            {% for banque in banques %}
+                <option value="{{ banque.id }}" {{ banque_choisie and banque_choisie.id == banque.id ? 'selected' : '' }}>
+                    {{ banque.nom }} — {{ banque.ville }}
+                </option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="bouton bouton-secondaire">Filtrer</button>
+    </form>
+
+    {% if creneaux is empty %}
+        <p class="vide">
+            Aucun créneau ouvert pour l’instant{% if banque_choisie %} dans cette banque{% endif %}.
+            Revenez dans quelques jours ou choisissez une autre banque.
+        </p>
+    {% else %}
+        {% set jour_courant = null %}
+        <ul class="liste-creneaux">
+            {% for creneau in creneaux %}
+                {% set jour = creneau.dateCreneau|date('Y-m-d') %}
+                {% if jour != jour_courant %}
+                    {% set jour_courant = jour %}
+                    <li class="liste-creneaux-jour">
+                        <h2>{{ creneau.dateCreneau|date('l j F Y')|capitalize }}</h2>
+                    </li>
+                {% endif %}
+
+                <li class="creneau">
+                    <div class="creneau-horaire">
+                        <span class="creneau-heure">{{ creneau.horaire }}</span>
+                        <span class="muet">{{ creneau.placesRestantes }} place(s) restante(s)</span>
+                    </div>
+
+                    <div class="creneau-lieu">
+                        <p class="creneau-banque">{{ creneau.banque.nom }}</p>
+                        <p class="muet">{{ creneau.lieu|default(creneau.banque.adresse) }}</p>
+                    </div>
+
+                    <div class="creneau-action">
+                        {% if blocage %}
+                            <span class="muet">Réservation indisponible</span>
+                        {% else %}
+                            <form method="post" action="{{ path('espace_donneur_reserver', {id: creneau.id}) }}">
+                                <input type="hidden" name="_token" value="{{ csrf_token('reserver' ~ creneau.id) }}">
+                                <button type="submit" class="bouton bouton-principal">Réserver</button>
+                            </form>
+                        {% endif %}
+                    </div>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <p class="note-accessibilite">
+        Un seul rendez-vous à la fois : annulez ou déplacez le vôtre avant d’en prendre
+        un nouveau. Une annulation libère immédiatement la place pour un autre donneur.
+    </p>
+{% endblock %}

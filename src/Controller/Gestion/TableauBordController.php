@@ -4,9 +4,11 @@ namespace App\Controller\Gestion;
 
 use App\Entity\Precommande;
 use App\Entity\Utilisateur;
+use App\Repository\DonRepository;
 use App\Repository\MouvementStockRepository;
 use App\Repository\PocheRepository;
 use App\Repository\PrecommandeRepository;
+use App\Repository\RendezVousDonRepository;
 use App\Repository\StockRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
@@ -14,7 +16,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 /**
- * Tableau de bord de la banque : les huit indicateurs du cahier des charges.
+ * Tableau de bord de la banque (ADM-02) : demandes en attente, stocks
+ * critiques et rendez-vous de don du jour, sur un seul écran.
  */
 #[Route('/gestion')]
 #[IsGranted('ROLE_AGENT')]
@@ -26,6 +29,8 @@ class TableauBordController extends AbstractController
         PrecommandeRepository $precommandes,
         PocheRepository $poches,
         MouvementStockRepository $mouvements,
+        RendezVousDonRepository $rendezVous,
+        DonRepository $dons,
     ): Response {
         /** @var Utilisateur $utilisateur */
         $utilisateur = $this->getUser();
@@ -63,6 +68,9 @@ class TableauBordController extends AbstractController
             'a_traiter' => $precommandes->pourBanque($banque->getId(), Precommande::EN_ATTENTE),
             'peremptions' => $perimeesBientot,
             'mouvements' => $mouvements->derniers($banque->getId(), 10),
+            'rendez_vous_jour' => $rendezVous->duJour($banque),
+            'rendez_vous_a_pointer' => $rendezVous->aPointer($banque),
+            'dons_a_qualifier' => $dons->aQualifier($banque),
         ]);
     }
 }

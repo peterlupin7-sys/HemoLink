@@ -24,7 +24,7 @@ security:
                 username_parameter: email
                 password_parameter: mot_de_passe
                 enable_csrf: true
-                default_target_path: tableau_bord
+                default_target_path: apres_connexion
             logout:
                 path: deconnexion
                 target: carte
@@ -37,13 +37,21 @@ security:
     # c'est la raison d'être de la plateforme.
     access_control:
         - { path: ^/connexion, roles: PUBLIC_ACCESS }
+        - { path: ^/apres-connexion, roles: IS_AUTHENTICATED_FULLY }
         - { path: ^/gestion, roles: [ROLE_AGENT, ROLE_GESTIONNAIRE, ROLE_ADMIN] }
+        # Le laboratoire a son propre espace : qualifier n'est pas gérer un stock.
+        - { path: ^/qualification, roles: [ROLE_PERSONNEL, ROLE_ADMIN] }
+        # Le donneur ne voit que ses rendez-vous et les créneaux encore ouverts.
+        - { path: ^/espace-donneur, roles: ROLE_DONNEUR }
         - { path: ^/administration, roles: ROLE_ADMIN }
         - { path: ^/, roles: PUBLIC_ACCESS }
 
+    # Le personnel habilité et le donneur sont volontairement hors de la chaîne
+    # gestionnaire → agent : ce sont des métiers différents, pas des niveaux de
+    # pouvoir. Seul l'administrateur hérite de tout.
     role_hierarchy:
         ROLE_GESTIONNAIRE: [ROLE_AGENT]
-        ROLE_ADMIN: [ROLE_GESTIONNAIRE, ROLE_AGENT]
+        ROLE_ADMIN: [ROLE_GESTIONNAIRE, ROLE_AGENT, ROLE_PERSONNEL]
 
 when@test:
     security:

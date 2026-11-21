@@ -39,13 +39,17 @@ DATABASE_URL="mysql://root:@127.0.0.1:3306/hemolink?serverVersion=10.4.32-MariaD
 | `agent.cnts@hemolink.bj` | `agent2026` | `ROLE_AGENT` | Saisie des stocks CNTS |
 | `agent.cnhu@hemolink.bj` | `agent2026` | `ROLE_AGENT` | Saisie des stocks CNHU |
 | `agent.chud-oueme@hemolink.bj` | `agent2026` | `ROLE_AGENT` | Saisie des stocks CHUD Ouémé |
+| `biologiste.cnts@hemolink.bj` | `hemolink2026` | `ROLE_PERSONNEL` | Qualification des dons CNTS |
+| `biologiste.cnhu@hemolink.bj` | `hemolink2026` | `ROLE_PERSONNEL` | Qualification des dons CNHU |
+| `donneur.sossou@hemolink.bj` | `agent2026` | `ROLE_DONNEUR` | Ses propres rendez-vous |
+| `donneur.tognon@hemolink.bj` | `agent2026` | `ROLE_DONNEUR` | Ses propres rendez-vous |
 
 Les mots de passe sont hachés en **bcrypt coût 12**, au format `$2y$` attendu par Symfony.
 **À supprimer avant toute mise en service réelle.**
 
 ---
 
-## 3. Les 14 tables
+## 3. Les 19 tables
 
 | # | Table | Rôle | Clés et colonnes notables |
 |---|---|---|---|
@@ -63,17 +67,23 @@ Les mots de passe sont hachés en **bcrypt coût 12**, au format `$2y$` attendu 
 | 12 | `compteur` | Numérotation sans doublon | PK `cle`, `prefixe`, `annee`, `valeur` |
 | 13 | `journal` | Traçabilité des actions | `action`, `entite`, `adresse_ip`, `date_action` |
 | 14 | `parametre` | Réglages sans redéploiement | PK `cle`, `valeur`, `type` |
+| 15 | `donneur` | Personnes qui donnent leur sang | `numero_donneur` unique, `utilisateur_id` unique et facultatif, `apte` |
+| 16 | `creneau_don` | Plages de collecte ouvertes | unique (`banque_id`, `date_creneau`, `heure_debut`), `capacite`, `places_reservees` |
+| 17 | `rendez_vous_don` | Réservation d'une place | `numero` unique, unique (`donneur_id`, `creneau_id`), `statut` |
+| 18 | `don` | Prélèvement réalisé | `code_don` unique, `rendez_vous_id` unique et facultatif, `hemoglobine` |
+| 19 | `qualification` | Analyses et validation | unique sur `don_id` **et** sur `poche_id`, `resultat`, 4 marqueurs |
 
-**21 clés étrangères**, toutes nommées (`fk_…`), avec la bonne politique de suppression :
+**34 clés étrangères**, toutes nommées (`fk_…`), avec la bonne politique de suppression :
 `CASCADE` quand l'enfant n'a pas de sens sans le parent (les stocks d'une banque),
 `RESTRICT` quand la suppression doit être empêchée (un groupe sanguin référencé),
 `SET NULL` quand le lien est facultatif (l'utilisateur qui a traité une précommande).
 
-Deux vues de confort sont fournies : `vue_stock_banque` et `vue_precommande_en_cours`.
+Trois vues de confort sont fournies : `vue_stock_banque`, `vue_precommande_en_cours` et
+`vue_creneau_disponible` (créneaux encore réservables, avec leurs places restantes).
 
 ---
 
-## 4. Les trois règles de gestion portées par le schéma
+## 4. Les quatre règles de gestion portées par le schéma
 
 **1. Le stock agrégé et les poches disent la même chose.**
 `stock.quantite_disponible` = nombre de poches `DISPONIBLE` de la banque pour ce groupe.
@@ -91,6 +101,13 @@ pas en dur dans le code.
 puis forme `PRE-COT-2026-00001`. C'est ce qui empêche deux précommandes simultanées de
 recevoir le même numéro.
 
+**4. Un don ne devient du stock qu'après une qualification conforme (DON-05).**
+`qualification.poche_id` n'est renseigné que lorsque `resultat = 'CONFORME'`. Un produit
+écarté n'a **aucune poche** : elle n'est pas créée, pas même avec un statut d'attente.
+C'est ce qui rend impossible la réservation d'un produit non qualifié, puisqu'une
+précommande ne peut réserver que des poches `DISPONIBLE`. La contrainte `UNIQUE` sur
+`qualification.poche_id` interdit par ailleurs qu'une même poche soit issue de deux dons.
+
 ---
 
 ## 5. Jeu de démonstration livré
@@ -98,16 +115,26 @@ recevoir le même numéro.
 | Contenu | Volume |
 |---|---|
 | Banques réelles (Cotonou, Abomey-Calavi, Porto-Novo, Parakou, Abomey, Lokossa, Natitingou, Tanguiéta) | 12 |
-| Comptes utilisateurs (1 admin, 4 gestionnaires, 3 agents) | 8 |
+| Comptes utilisateurs (1 admin, 4 gestionnaires, 3 agents, 2 personnels habilités, 2 donneurs) | 12 |
 | Groupes sanguins et règles de compatibilité | 8 + 27 |
 | Poches individuelles avec dates de prélèvement et de péremption | 604 |
 | Lignes de stock (12 banques × 8 groupes) | 96 |
 | Précommandes couvrant tous les statuts | 7 |
-| Mouvements de stock, SMS, entrées de journal, paramètres | 12 + 7 + 6 + 11 |
+| Mouvements de stock, SMS, entrées de journal, paramètres | 24 + 12 + 9 + 18 |
+| Donneurs, dont deux disposant d'un compte en ligne | 8 |
+| Créneaux de collecte (4 banques, J-7 → J+14, dont 1 collecte mobile) | 216 |
+| Rendez-vous (5 planifiés, 16 honorés, 1 annulé, 1 absence) | 23 |
+| Dons (12 qualifiés, 2 écartés, 2 en cours d'analyse) | 16 |
+| Qualifications (12 conformes, 2 non conformes) | 14 |
 
 Les états sont volontairement variés : **47 disponibles, 35 en tension, 6 ruptures,
 8 non communiqués** (une banque n'a pas mis son stock à jour depuis plus de 24 h). La carte
 montre donc les quatre couleurs de la charte dès le premier lancement.
+
+Côté collecte, **148 créneaux restent ouverts et 1 179 places sont libres** : l'espace
+donneur n'est jamais vide à la démonstration. Les dons conformes sont rattachés à des
+poches **déjà comptées** dans le stock — aucune poche n'est ajoutée par le module don,
+pour que les quantités affichées restent exactes.
 
 > Les coordonnées GPS sont réalistes mais **à vérifier banque par banque** avant une
 > utilisation réelle, de même que les numéros de téléphone, qui sont fictifs.
@@ -159,7 +186,7 @@ ORDER BY p.date_peremption;
 
 ---
 
-## 7. Correspondance avec les entités Doctrine (étape suivante)
+## 7. Correspondance avec les entités Doctrine
 
 | Table | Entité | Relations principales |
 |---|---|---|
@@ -174,6 +201,11 @@ ORDER BY p.date_peremption;
 | `mouvement_stock` | `MouvementStock` | ManyToOne `Banque`, `GroupeSanguin`, `Utilisateur` |
 | `notification_sms` | `NotificationSms` | ManyToOne `Precommande` |
 | `compteur`, `journal`, `parametre` | `Compteur`, `Journal`, `Parametre` | — |
+| `donneur` | `Donneur` | ManyToOne `Utilisateur`, `GroupeSanguin` ; OneToMany `RendezVousDon`, `Don` |
+| `creneau_don` | `CreneauDon` | ManyToOne `Banque` ; OneToMany `RendezVousDon` |
+| `rendez_vous_don` | `RendezVousDon` | ManyToOne `Donneur`, `CreneauDon` |
+| `don` | `Don` | ManyToOne `Donneur`, `Banque`, `RendezVousDon`, `GroupeSanguin`, `Utilisateur` |
+| `qualification` | `Qualification` | OneToOne `Don` ; ManyToOne `Poche`, `Utilisateur`, `GroupeSanguin` |
 
 Deux manières de passer à Symfony :
 - **Rétro-ingénierie** : `php bin/console doctrine:mapping:import` puis
@@ -181,3 +213,25 @@ Deux manières de passer à Symfony :
 - **Écriture des entités à la main** à partir de ce schéma, puis
   `make:migration` — plus long, mais c'est le chemin que le professeur attend d'un
   projet Symfony, et les migrations deviennent la référence.
+
+---
+
+## 8. Vérifier la base après import
+
+Le script `outils/valide_sql.py` rejoue l'intégralité de `hemolink.sql` dans une base
+SQLite temporaire et contrôle **neuf règles métier** avant toute mise en ligne :
+
+1. intégrité référentielle (`PRAGMA foreign_key_check`) ;
+2. `stock.quantite_disponible` = comptage réel des poches `DISPONIBLE` ;
+3. `stock.etat` déduit de la quantité, jamais saisi ;
+4. aucune qualification `NON_CONFORME` ne porte de poche ;
+5. toute qualification `CONFORME` en porte une ;
+6. le statut du don est cohérent avec sa qualification ;
+7. `creneau_don.places_reservees` = rendez-vous `PLANIFIE` + `HONORE` ;
+8. aucun créneau en surbooking, aucun don rattaché à un rendez-vous non honoré ;
+9. toute qualification est signée par un compte `ROLE_PERSONNEL`.
+
+```bash
+python3 outils/gen_sql.py     # régénère base/hemolink.sql
+python3 outils/valide_sql.py  # doit afficher « TOUT EST COHERENT »
+```

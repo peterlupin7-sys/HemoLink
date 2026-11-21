@@ -13,13 +13,38 @@ class SecurityController extends AbstractController
     public function connexion(AuthenticationUtils $utils): Response
     {
         if ($this->getUser()) {
-            return $this->redirectToRoute('tableau_bord');
+            return $this->redirectToRoute('apres_connexion');
         }
 
         return $this->render('securite/connexion.html.twig', [
             'dernier_email' => $utils->getLastUsername(),
             'erreur' => $utils->getLastAuthenticationError(),
         ]);
+    }
+
+    /**
+     * Aiguillage après connexion.
+     *
+     * Les comptes n'ont pas le même métier : un donneur n'a rien à faire sur le
+     * tableau de bord d'une banque, et le laboratoire veut sa file de dons, pas
+     * la liste des précommandes. On envoie donc chacun chez lui.
+     */
+    #[Route('/apres-connexion', name: 'apres_connexion', methods: ['GET'])]
+    public function apresConnexion(): Response
+    {
+        if ($this->isGranted('ROLE_AGENT')) {
+            return $this->redirectToRoute('tableau_bord');
+        }
+
+        if ($this->isGranted('ROLE_PERSONNEL')) {
+            return $this->redirectToRoute('qualification');
+        }
+
+        if ($this->isGranted('ROLE_DONNEUR')) {
+            return $this->redirectToRoute('espace_donneur');
+        }
+
+        return $this->redirectToRoute('carte');
     }
 
     #[Route('/deconnexion', name: 'deconnexion', methods: ['GET'])]

@@ -1,0 +1,90 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Qualifier le don {{ don.codeDon }}{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Personnel habilité</p>
+            <h1>Don {{ don.codeDon }}</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('qualification') }}">Retour à la file</a>
+        </nav>
+    </header>
+
+    <section class="bloc">
+        <h2>Prélèvement</h2>
+        <dl class="definitions">
+            <dt>Donneur</dt>
+            <dd>{{ don.donneur.nomComplet }} ({{ don.donneur.numeroDonneur }})</dd>
+            <dt>Prélevé le</dt>
+            <dd>{{ don.dateDon|date('d/m/Y à H:i') }}</dd>
+            <dt>Volume</dt>
+            <dd>{{ don.volumeMl }} ml</dd>
+            <dt>Hémoglobine</dt>
+            <dd>{{ don.hemoglobine ? don.hemoglobine ~ ' g/dL' : 'non renseignée' }}</dd>
+            <dt>Banque</dt>
+            <dd>{{ don.banque.nom }}</dd>
+            {% if don.observation %}
+                <dt>Observation</dt>
+                <dd>{{ don.observation }}</dd>
+            {% endif %}
+        </dl>
+    </section>
+
+    <form method="post" action="{{ path('qualification_prononcer', {id: don.id}) }}" class="bloc">
+        <input type="hidden" name="_token" value="{{ csrf_token('qualifier' ~ don.id) }}">
+
+        <h2>Résultats des analyses</h2>
+        <p class="chapeau">
+            Un seul marqueur positif écarte le produit. Dans ce cas, aucune poche n’est
+            créée : le don ne rejoint jamais le stock utilisable.
+        </p>
+
+        <fieldset class="grille-tests">
+            <legend class="sr-only">Marqueurs infectieux</legend>
+
+            {% for champ, libelle in tests %}
+                <div class="test">
+                    <p class="test-titre">{{ libelle }}</p>
+                    <label><input type="radio" name="{{ champ }}" value="NEGATIF" required> Négatif</label>
+                    <label><input type="radio" name="{{ champ }}" value="POSITIF"> Positif</label>
+                    <label><input type="radio" name="{{ champ }}" value="NON_FAIT"> Non fait</label>
+                </div>
+            {% endfor %}
+        </fieldset>
+
+        <div class="champ">
+            <label for="groupe">Groupe sanguin confirmé</label>
+            <select id="groupe" name="groupe" required>
+                <option value="">— à sélectionner —</option>
+                {% for groupe in groupes %}
+                    <option value="{{ groupe.id }}"
+                            {{ don.groupeSanguin and don.groupeSanguin.id == groupe.id ? 'selected' : '' }}>
+                        {{ groupe.code }}
+                    </option>
+                {% endfor %}
+            </select>
+            <p class="aide">
+                Le groupe retenu ici est celui qui sera inscrit sur la poche et sur la
+                fiche du donneur.
+            </p>
+        </div>
+
+        <div class="champ">
+            <label for="motif_rejet">Motif de rejet (facultatif)</label>
+            <input type="text" id="motif_rejet" name="motif_rejet" maxlength="255"
+                   placeholder="Volume insuffisant, poche percée, hémolyse…">
+            <p class="aide">
+                Renseigné, ce champ écarte le produit même si tous les marqueurs sont
+                négatifs.
+            </p>
+        </div>
+
+        <div class="actions-formulaire">
+            <button type="submit" class="bouton bouton-principal">Prononcer la qualification</button>
+            <a class="bouton bouton-texte" href="{{ path('qualification') }}">Annuler</a>
+        </div>
+    </form>
+{% endblock %}

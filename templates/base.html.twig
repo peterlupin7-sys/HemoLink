@@ -28,7 +28,15 @@
             <a href="{{ path('carte') }}">Carte</a>
             <a href="{{ path('suivi') }}">Suivre une précommande</a>
             {% if app.user %}
-                <a href="{{ path('tableau_bord') }}">Tableau de bord</a>
+                {% if is_granted('ROLE_AGENT') %}
+                    <a href="{{ path('tableau_bord') }}">Tableau de bord</a>
+                {% endif %}
+                {% if is_granted('ROLE_PERSONNEL') %}
+                    <a href="{{ path('qualification') }}">Qualification</a>
+                {% endif %}
+                {% if is_granted('ROLE_DONNEUR') %}
+                    <a href="{{ path('espace_donneur') }}">Mon espace donneur</a>
+                {% endif %}
                 {% if is_granted('ROLE_ADMIN') %}
                     <a href="{{ path('administration') }}">Administration</a>
                 {% endif %}
@@ -36,7 +44,7 @@
                     {{ app.user.prenom }} — Déconnexion
                 </a>
             {% else %}
-                <a class="entete-compte" href="{{ path('connexion') }}">Espace banque</a>
+                <a class="entete-compte" href="{{ path('connexion') }}">Se connecter</a>
             {% endif %}
         </nav>
     </div>

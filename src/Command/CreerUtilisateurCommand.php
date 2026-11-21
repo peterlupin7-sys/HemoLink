@@ -24,7 +24,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
  */
 #[AsCommand(
     name: 'app:creer-utilisateur',
-    description: 'Crée un compte (administrateur, gestionnaire ou agent).',
+    description: 'Crée un compte (admin, gestionnaire, agent, personnel habilité ou donneur).',
 )]
 class CreerUtilisateurCommand extends Command
 {
@@ -41,12 +41,13 @@ class CreerUtilisateurCommand extends Command
     {
         $this
             ->addArgument('email', InputArgument::REQUIRED, 'Adresse électronique')
-            ->addArgument('role', InputArgument::REQUIRED, 'ADMIN, GESTIONNAIRE ou AGENT')
+            ->addArgument('role', InputArgument::REQUIRED,
+                'ADMIN, GESTIONNAIRE, AGENT, PERSONNEL ou DONNEUR')
             ->addOption('nom', null, InputOption::VALUE_REQUIRED, 'Nom de famille')
             ->addOption('prenom', null, InputOption::VALUE_REQUIRED, 'Prénom')
             ->addOption('telephone', null, InputOption::VALUE_REQUIRED, 'Téléphone')
             ->addOption('banque', null, InputOption::VALUE_REQUIRED,
-                'Code de la banque (obligatoire sauf pour ADMIN)')
+                'Code de la banque (obligatoire sauf pour ADMIN et DONNEUR)')
             ->addOption('mot-de-passe', null, InputOption::VALUE_REQUIRED,
                 'Mot de passe (sinon demandé de façon masquée)');
     }
@@ -59,8 +60,9 @@ class CreerUtilisateurCommand extends Command
         $role = 'ROLE_'.strtoupper((string) $input->getArgument('role'));
 
         if (!\in_array($role, [Utilisateur::ROLE_ADMIN, Utilisateur::ROLE_GESTIONNAIRE,
-            Utilisateur::ROLE_AGENT], true)) {
-            $io->error('Rôle inconnu : utilisez ADMIN, GESTIONNAIRE ou AGENT.');
+            Utilisateur::ROLE_AGENT, Utilisateur::ROLE_PERSONNEL,
+            Utilisateur::ROLE_DONNEUR], true)) {
+            $io->error('Rôle inconnu : utilisez ADMIN, GESTIONNAIRE, AGENT, PERSONNEL ou DONNEUR.');
 
             return Command::INVALID;
         }
@@ -71,13 +73,15 @@ class CreerUtilisateurCommand extends Command
             return Command::FAILURE;
         }
 
+        // L'administrateur est national, le donneur n'appartient à personne :
+        // ni l'un ni l'autre n'est rattaché à une banque.
         $banque = null;
-        if (Utilisateur::ROLE_ADMIN !== $role) {
+        if (!\in_array($role, [Utilisateur::ROLE_ADMIN, Utilisateur::ROLE_DONNEUR], true)) {
             $code = $input->getOption('banque');
 
             if (!$code) {
-                $io->error('Un gestionnaire ou un agent doit être rattaché à une banque '
-                    .'(--banque=BQ-COT-001).');
+                $io->error('Un gestionnaire, un agent ou un personnel habilité doit être '
+                    .'rattaché à une banque (--banque=BQ-COT-001).');
 
                 return Command::INVALID;
             }

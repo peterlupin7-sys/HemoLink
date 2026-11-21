@@ -41,7 +41,8 @@
                     <td>{{ utilisateur.email }}</td>
                     <td>
                         {% for role in utilisateur.roles if role != 'ROLE_USER' %}
-                            {{ role|replace({'ROLE_': ''})|capitalize }}
+                            {{ attribute(constant('App\\Entity\\Utilisateur::LIBELLES_ROLES'), role)
+                               |default(role|replace({'ROLE_': ''})|capitalize) }}
                         {% endfor %}
                     </td>
                     <td>{{ utilisateur.banque ? utilisateur.banque.nom : 'Niveau national' }}</td>

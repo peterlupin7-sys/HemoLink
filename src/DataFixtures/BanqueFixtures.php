@@ -79,7 +79,16 @@ class BanqueFixtures extends Fixture implements DependentFixtureInterface, Fixtu
         ['agent.cnts@hemolink.bj', Utilisateur::ROLE_AGENT, 'KOTCHOFA', 'Pélagie', '+229 97 65 43 21', 'BQ-COT-001'],
         ['agent.cnhu@hemolink.bj', Utilisateur::ROLE_AGENT, 'DOSSOU', 'Ernest', '+229 96 98 76 54', 'BQ-COT-002'],
         ['agent.chud-oueme@hemolink.bj', Utilisateur::ROLE_AGENT, 'ZANNOU', 'Félicité', '+229 95 13 57 91', 'BQ-PNO-001'],
+        // Personnel habilité : il qualifie les dons, il ne gère pas le stock.
+        ['biologiste.cnts@hemolink.bj', Utilisateur::ROLE_PERSONNEL, 'AKPOVI', 'Félicienne', '+229 97 22 41 85', 'BQ-COT-001'],
+        ['biologiste.cnhu@hemolink.bj', Utilisateur::ROLE_PERSONNEL, 'LAWANI', 'Boubacar', '+229 96 50 73 12', 'BQ-COT-002'],
+        // Comptes donneurs, rattachés à aucune banque.
+        ['donneur.sossou@hemolink.bj', Utilisateur::ROLE_DONNEUR, 'SOSSOU', 'Armand', '+229 97 31 76 20', null],
+        ['donneur.tognon@hemolink.bj', Utilisateur::ROLE_DONNEUR, 'TOGNON', 'Mireille', '+229 96 44 08 15', null],
     ];
+
+    /** Référence Doctrine d'un compte, pour les fixtures qui en ont besoin. */
+    public const COMPTE = 'compte-';
 
     public function __construct(private readonly UserPasswordHasherInterface $hacheur)
     {
@@ -128,10 +137,12 @@ class BanqueFixtures extends Fixture implements DependentFixtureInterface, Fixtu
                 ->setDateCreation($creation->modify('+20 days'));
 
             // Mots de passe de démonstration : à changer au premier déploiement.
-            $motDePasse = Utilisateur::ROLE_AGENT === $role ? 'agent2026' : 'hemolink2026';
+            $motDePasse = \in_array($role, [Utilisateur::ROLE_AGENT, Utilisateur::ROLE_DONNEUR], true)
+                ? 'agent2026' : 'hemolink2026';
             $utilisateur->setMotDePasse($this->hacheur->hashPassword($utilisateur, $motDePasse));
 
             $manager->persist($utilisateur);
+            $this->addReference(self::COMPTE.$email, $utilisateur);
         }
 
         $manager->flush();

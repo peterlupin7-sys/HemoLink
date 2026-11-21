@@ -1,0 +1,281 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Collecte et rendez-vous — {{ banque.nom }}{% endblock %}
+{% block classe_main %}conteneur-large{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Collecte</p>
+            <h1>{{ banque.nom }}</h1>
+        </div>
+        <nav class="onglets">
+            <a href="{{ path('tableau_bord') }}">Vue d’ensemble</a>
+            <a href="{{ path('gestion_stocks') }}">Stocks</a>
+            <a href="{{ path('gestion_precommandes') }}">Précommandes</a>
+            <a class="actif" href="{{ path('gestion_collecte') }}">Collecte</a>
+        </nav>
+    </header>
+
+    <section class="indicateurs">
+        <div class="indicateur">
+            <span class="nombre-cle">{{ attendus|length }}</span>
+            <span class="libelle">donneur(s) attendu(s) aujourd’hui</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ dons_jour }}</span>
+            <span class="libelle">don(s) prélevé(s) aujourd’hui</span>
+        </div>
+        <div class="indicateur {{ (par_statut['EN_QUALIFICATION']|default(0)) > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ par_statut['EN_QUALIFICATION']|default(0) }}</span>
+            <span class="libelle">en attente du laboratoire</span>
+        </div>
+        <div class="indicateur {{ a_pointer|length > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ a_pointer|length }}</span>
+            <span class="libelle">rendez-vous à pointer</span>
+        </div>
+    </section>
+
+    <section class="bloc">
+        <h2>Rendez-vous du jour</h2>
+
+        {% if attendus is empty %}
+            <p class="vide">Aucun donneur attendu aujourd’hui.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Heure</th>
+                        <th scope="col">Donneur</th>
+                        <th scope="col">Téléphone</th>
+                        <th scope="col">Référence</th>
+                        <th scope="col">Statut</th>
+                        <th scope="col">Accueil</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rdv in attendus %}
+                        <tr>
+                            <th scope="row">{{ rdv.creneau.horaire }}</th>
+                            <td>
+                                {{ rdv.donneur.nomComplet }}
+                                <span class="muet">{{ rdv.donneur.numeroDonneur }}</span>
+                            </td>
+                            <td>{{ rdv.donneur.telephone|telephone }}</td>
+                            <td><code>{{ rdv.numero }}</code></td>
+                            <td>
+                                <span class="pastille {{ rdv.statut == 'HONORE' ? 'etat-disponible' : 'etat-tension' }}">
+                                    {{ rdv.libelleStatut }}
+                                </span>
+                            </td>
+                            <td class="actions-ligne">
+                                {% if rdv.statut == 'PLANIFIE' %}
+                                    <form method="post" action="{{ path('gestion_rdv_pointer', {id: rdv.id, action: 'present'}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('pointer' ~ rdv.id) }}">
+                                        <button type="submit" class="bouton bouton-texte">Présent</button>
+                                    </form>
+                                    <form method="post" action="{{ path('gestion_rdv_pointer', {id: rdv.id, action: 'absent'}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('pointer' ~ rdv.id) }}">
+                                        <button type="submit" class="bouton bouton-texte">Absent</button>
+                                    </form>
+                                {% else %}
+                                    <span class="muet">pointé</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+
+    <div class="deux-colonnes">
+        <section class="bloc">
+            <h2>Enregistrer un prélèvement</h2>
+
+            <form method="get" action="{{ path('gestion_collecte') }}" class="filtres">
+                <label for="q">Rechercher un donneur</label>
+                <input type="search" id="q" name="q" value="{{ recherche }}"
+                       placeholder="Nom, numéro ou téléphone">
+                <button type="submit" class="bouton bouton-secondaire">Chercher</button>
+            </form>
+
+            {% if recherche and resultats is empty %}
+                <p class="vide">Aucun donneur ne correspond à « {{ recherche }} ».</p>
+            {% endif %}
+
+            {% if resultats is not empty %}
+                <form method="post" action="{{ path('gestion_don_nouveau') }}">
+                    <input type="hidden" name="_token" value="{{ csrf_token('don_nouveau') }}">
+
+                    <div class="champ">
+                        <label for="donneur">Donneur</label>
+                        <select id="donneur" name="donneur" required>
+                            {% for donneur in resultats %}
+                                <option value="{{ donneur.id }}">
+                                    {{ donneur.nomComplet }} — {{ donneur.numeroDonneur }}
+                                    ({{ donneur.nombreDons }} don(s))
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="champ">
+                        <label for="rendez_vous">Rendez-vous associé (facultatif)</label>
+                        <select id="rendez_vous" name="rendez_vous">
+                            <option value="">Don spontané, sans rendez-vous</option>
+                            {% for rdv in attendus %}
+                                <option value="{{ rdv.id }}">
+                                    {{ rdv.numero }} — {{ rdv.donneur.nomComplet }} ({{ rdv.creneau.horaire }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="champ-ligne">
+                        <div class="champ">
+                            <label for="groupe">Groupe présumé</label>
+                            <select id="groupe" name="groupe">
+                                <option value="">À déterminer au laboratoire</option>
+                                {% for groupe in groupes %}
+                                    <option value="{{ groupe.id }}">{{ groupe.code }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="champ">
+                            <label for="volume">Volume (ml)</label>
+                            <input type="number" id="volume" name="volume" value="450" min="200" max="600" step="10">
+                        </div>
+                        <div class="champ">
+                            <label for="hemoglobine">Hémoglobine (g/dL)</label>
+                            <input type="text" id="hemoglobine" name="hemoglobine" inputmode="decimal"
+                                   placeholder="13,5">
+                        </div>
+                    </div>
+
+                    <div class="champ">
+                        <label for="observation">Observation</label>
+                        <input type="text" id="observation" name="observation" maxlength="255">
+                    </div>
+
+                    <div class="actions-formulaire">
+                        <button type="submit" class="bouton bouton-principal">Enregistrer le don</button>
+                    </div>
+
+                    <p class="note-accessibilite">
+                        Le don part en qualification. Aucune poche n’entre au stock tant que
+                        le personnel habilité n’a pas validé les analyses.
+                    </p>
+                </form>
+            {% endif %}
+        </section>
+
+        <section class="bloc">
+            <h2>Derniers dons</h2>
+            {% if dons_recents is empty %}
+                <p class="vide">Aucun don enregistré.</p>
+            {% else %}
+                <table class="tableau">
+                    <thead>
+                        <tr>
+                            <th scope="col">Don</th>
+                            <th scope="col">Donneur</th>
+                            <th scope="col">Date</th>
+                            <th scope="col">Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for don in dons_recents %}
+                            <tr>
+                                <th scope="row"><code>{{ don.codeDon }}</code></th>
+                                <td>{{ don.donneur.nomComplet }}</td>
+                                <td>{{ don.dateDon|date('d/m H:i') }}</td>
+                                <td>
+                                    <span class="pastille {{ don.statut == 'QUALIFIE' ? 'etat-disponible' : (don.statut == 'REJETE' ? 'etat-rupture' : 'etat-tension') }}">
+                                        {{ don.libelleStatut }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
+    </div>
+
+    <section class="bloc">
+        <h2>Créneaux de collecte</h2>
+
+        {% if is_granted('ROLE_GESTIONNAIRE') %}
+            <form method="post" action="{{ path('gestion_creneau_nouveau') }}" class="champ-ligne">
+                <input type="hidden" name="_token" value="{{ csrf_token('creneau_nouveau') }}">
+                <div class="champ">
+                    <label for="date_creneau">Date</label>
+                    <input type="date" id="date_creneau" name="date_creneau" required>
+                </div>
+                <div class="champ">
+                    <label for="heure_debut">Début</label>
+                    <input type="time" id="heure_debut" name="heure_debut" value="08:00" required>
+                </div>
+                <div class="champ">
+                    <label for="heure_fin">Fin</label>
+                    <input type="time" id="heure_fin" name="heure_fin" value="10:00" required>
+                </div>
+                <div class="champ">
+                    <label for="capacite">Places</label>
+                    <input type="number" id="capacite" name="capacite" value="8" min="1" max="60">
+                </div>
+                <div class="champ">
+                    <label for="lieu">Lieu (si collecte mobile)</label>
+                    <input type="text" id="lieu" name="lieu" maxlength="150">
+                </div>
+                <div class="champ">
+                    <button type="submit" class="bouton bouton-principal">Ouvrir le créneau</button>
+                </div>
+            </form>
+        {% endif %}
+
+        {% if creneaux is empty %}
+            <p class="vide">Aucun créneau sur la période.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Date</th>
+                        <th scope="col">Horaire</th>
+                        <th scope="col">Lieu</th>
+                        <th scope="col">Occupation</th>
+                        <th scope="col">Statut</th>
+                        {% if is_granted('ROLE_GESTIONNAIRE') %}<th scope="col"></th>{% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for creneau in creneaux %}
+                        <tr>
+                            <th scope="row">{{ creneau.dateCreneau|date('d/m/Y') }}</th>
+                            <td>{{ creneau.horaire }}</td>
+                            <td>{{ creneau.lieu|default('Sur place') }}</td>
+                            <td class="nombre">{{ creneau.placesReservees }} / {{ creneau.capacite }}</td>
+                            <td>
+                                <span class="pastille {{ creneau.statut == 'OUVERT' ? 'etat-disponible' : (creneau.statut == 'ANNULE' ? 'etat-rupture' : 'etat-inconnu') }}">
+                                    {{ creneau.libelleStatut }}
+                                </span>
+                            </td>
+                            {% if is_granted('ROLE_GESTIONNAIRE') %}
+                                <td>
+                                    {% if creneau.statut in ['OUVERT', 'COMPLET'] and not creneau.estPasse %}
+                                        <form method="post" action="{{ path('gestion_creneau_fermer', {id: creneau.id}) }}"
+                                              onsubmit="return confirm('Annuler ce créneau ? Les donneurs inscrits seront prévenus par SMS.');">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('creneau' ~ creneau.id) }}">
+                                            <button type="submit" class="bouton bouton-texte">Annuler</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </section>
+{% endblock %}

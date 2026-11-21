@@ -138,6 +138,8 @@ a { color: var(--hl-rouge, #be123c); }
     color: var(--hl-lagon, #0e7490); }
 .alerte-erreur { background: var(--hl-rose, #fff5f5); border-color: var(--hl-rose-trait, #fecdd3);
     color: var(--hl-rouge-profond, #9f1239); }
+.alerte-attention { background: var(--hl-terre-pale, #fff7ed); border-color: var(--hl-terre, #c2410c);
+    color: var(--hl-terre, #c2410c); }
 
 /* ---------- recherche et carte ---------- */
 .recherche {
@@ -281,6 +283,69 @@ a { color: var(--hl-rouge, #be123c); }
     border-left: 3px solid var(--hl-rose-trait, #fecdd3); padding-left: .8rem; margin-top: 1rem;
 }
 
+/* ---------- collecte, rendez-vous, qualification ---------- */
+.sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+.champ-ligne { display: flex; gap: 1rem; flex-wrap: wrap; align-items: flex-end; }
+.champ-ligne .champ { flex: 1 1 10rem; margin-bottom: 1rem; }
+
+.filtres label { font-weight: 600; align-self: center; }
+.filtres input[type="search"], .filtres select {
+    min-height: 44px; padding: .5rem .8rem; border-radius: var(--hl-r, 16px);
+    border: 1px solid var(--hl-trait, #e7e5e4); background: #fff; min-width: 14rem;
+}
+
+.actions-ligne { display: flex; gap: .4rem; flex-wrap: wrap; }
+
+/* rendez-vous du donneur */
+.liste-cartes { list-style: none; padding: 0; margin: 0; display: grid; gap: .8rem; }
+.carte-rdv {
+    display: flex; gap: 1rem; justify-content: space-between; flex-wrap: wrap;
+    align-items: center; padding: 1rem 1.2rem; background: #fff;
+    border: 1px solid var(--hl-rose-trait, #fecdd3); border-left: 4px solid var(--hl-rouge, #be123c);
+    border-radius: var(--hl-r-carte, 22px);
+}
+.carte-rdv-date { font-weight: 800; font-size: 1.1rem; margin: 0 0 .2rem; }
+.carte-rdv-lieu { margin: 0 0 .2rem; color: var(--hl-pierre, #57534e); }
+.carte-rdv-actions { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+
+/* créneaux disponibles */
+.liste-creneaux { list-style: none; padding: 0; margin: 0; }
+.liste-creneaux-jour h2 {
+    font-size: 1.05rem; margin: 1.4rem 0 .6rem; color: var(--hl-pierre, #57534e);
+    border-bottom: 1px solid var(--hl-trait, #e7e5e4); padding-bottom: .3rem;
+}
+.creneau {
+    display: grid; grid-template-columns: 9rem 1fr auto; gap: 1rem; align-items: center;
+    padding: .85rem 1.1rem; margin-bottom: .6rem; background: #fff;
+    border: 1px solid var(--hl-trait, #e7e5e4); border-radius: var(--hl-r, 16px);
+}
+.creneau-heure {
+    display: block; font-weight: 800; font-size: 1.1rem;
+    font-variant-numeric: tabular-nums;
+}
+.creneau-banque { margin: 0; font-weight: 600; }
+.creneau-lieu p { margin: 0; }
+.creneau-action form { margin: 0; }
+
+/* grille des marqueurs infectieux */
+.grille-tests {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: .8rem; border: 0; padding: 0; margin: 0 0 1.2rem;
+}
+.test {
+    padding: .8rem 1rem; background: var(--hl-sable, #faf7f5);
+    border: 1px solid var(--hl-trait, #e7e5e4); border-radius: var(--hl-r, 16px);
+}
+.test-titre { margin: 0 0 .5rem; font-weight: 700; }
+.test label {
+    display: flex; align-items: center; gap: .5rem; min-height: 32px;
+    font-size: .95rem; cursor: pointer;
+}
+
 /* ---------- téléphone ---------- */
 @media (max-width: 860px) {
     .recherche, .carte-page { grid-template-columns: 1fr; }
@@ -289,4 +354,7 @@ a { color: var(--hl-rouge, #be123c); }
     .saisie-ligne { grid-template-columns: 3.4rem 1fr 5rem; }
     .saisie-ligne .muet:last-child { grid-column: 1 / -1; }
     .entete-nav { gap: .75rem; font-size: .95rem; }
+    .creneau { grid-template-columns: 1fr; }
+    .creneau-action .bouton { width: 100%; }
+    .champ-ligne { flex-direction: column; align-items: stretch; }
 }

@@ -82,12 +82,16 @@ class Banque
     #[ORM\OneToMany(mappedBy: 'banque', targetEntity: Precommande::class)]
     private Collection $precommandes;
 
+    #[ORM\OneToMany(mappedBy: 'banque', targetEntity: CreneauDon::class)]
+    private Collection $creneaux;
+
     public function __construct()
     {
         $this->stocks = new ArrayCollection();
         $this->poches = new ArrayCollection();
         $this->utilisateurs = new ArrayCollection();
         $this->precommandes = new ArrayCollection();
+        $this->creneaux = new ArrayCollection();
         $this->dateCreation = new \DateTimeImmutable();
     }
 
@@ -391,6 +395,33 @@ class Banque
     {
         if ($this->precommandes->removeElement($precommande) && $precommande->getBanque() === $this) {
             $precommande->setBanque(null);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, CreneauDon>
+     */
+    public function getCreneaux(): Collection
+    {
+        return $this->creneaux;
+    }
+
+    public function addCreneaux(CreneauDon $creneaux): static
+    {
+        if (!$this->creneaux->contains($creneaux)) {
+            $this->creneaux->add($creneaux);
+            $creneaux->setBanque($this);
+        }
+
+        return $this;
+    }
+
+    public function removeCreneaux(CreneauDon $creneaux): static
+    {
+        if ($this->creneaux->removeElement($creneaux) && $creneaux->getBanque() === $this) {
+            $creneaux->setBanque(null);
         }
 
         return $this;

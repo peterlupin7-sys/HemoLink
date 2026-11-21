@@ -30,6 +30,12 @@ USE `hemolink`;
 
 DROP VIEW  IF EXISTS `vue_stock_banque`;
 DROP VIEW  IF EXISTS `vue_precommande_en_cours`;
+DROP VIEW  IF EXISTS `vue_creneau_disponible`;
+DROP TABLE IF EXISTS `qualification`;
+DROP TABLE IF EXISTS `don`;
+DROP TABLE IF EXISTS `rendez_vous_don`;
+DROP TABLE IF EXISTS `creneau_don`;
+DROP TABLE IF EXISTS `donneur`;
 DROP TABLE IF EXISTS `journal`;
 DROP TABLE IF EXISTS `notification_sms`;
 DROP TABLE IF EXISTS `mouvement_stock`;
@@ -352,6 +358,162 @@ CREATE TABLE `parametre` (
   PRIMARY KEY (`cle`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- =====================================================================
+--  MODULE DON — rendez-vous, dons et qualification des produits
+--
+--  Regle intangible (DON-05) : une poche n'entre au stock utilisable
+--  qu'apres une qualification CONFORME prononcee par un personnel
+--  habilite. Tant que la qualification n'existe pas, le don n'est pas
+--  du stock : il n'apparait ni sur la carte, ni dans les precommandes.
+-- =====================================================================
+
+-- ---------------------------------------------------------------------
+-- 15. donneur — personnes qui donnent leur sang
+-- ---------------------------------------------------------------------
+CREATE TABLE `donneur` (
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `utilisateur_id`    INT UNSIGNED DEFAULT NULL
+                      COMMENT 'Compte ROLE_DONNEUR, facultatif : on peut donner sans compte',
+  `groupe_sanguin_id` TINYINT UNSIGNED DEFAULT NULL
+                      COMMENT 'Connu seulement apres une premiere qualification',
+  `numero_donneur`    VARCHAR(20)  NOT NULL,
+  `nom`               VARCHAR(80)  NOT NULL,
+  `prenom`            VARCHAR(80)  NOT NULL,
+  `sexe`              ENUM('F','M') NOT NULL,
+  `date_naissance`    DATE NOT NULL,
+  `telephone`         VARCHAR(30)  NOT NULL,
+  `email`             VARCHAR(180) DEFAULT NULL,
+  `ville`             VARCHAR(80)  DEFAULT NULL,
+  `dernier_don`       DATE DEFAULT NULL,
+  `nombre_dons`       SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  `apte`              TINYINT(1) NOT NULL DEFAULT 1,
+  `motif_inaptitude`  VARCHAR(255) DEFAULT NULL,
+  `date_creation`     DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_donneur_numero` (`numero_donneur`),
+  UNIQUE KEY `uk_donneur_utilisateur` (`utilisateur_id`),
+  KEY `idx_donneur_groupe` (`groupe_sanguin_id`),
+  KEY `idx_donneur_nom` (`nom`, `prenom`),
+  CONSTRAINT `fk_donneur_utilisateur` FOREIGN KEY (`utilisateur_id`)
+    REFERENCES `utilisateur` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_donneur_groupe` FOREIGN KEY (`groupe_sanguin_id`)
+    REFERENCES `groupe_sanguin` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 16. creneau_don — plages de collecte ouvertes par une banque
+-- ---------------------------------------------------------------------
+CREATE TABLE `creneau_don` (
+  `id`               INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `banque_id`        INT UNSIGNED NOT NULL,
+  `date_creneau`     DATE NOT NULL,
+  `heure_debut`      TIME NOT NULL,
+  `heure_fin`        TIME NOT NULL,
+  `capacite`         SMALLINT UNSIGNED NOT NULL DEFAULT 8,
+  `places_reservees` SMALLINT UNSIGNED NOT NULL DEFAULT 0
+                     COMMENT 'Compte exact des rendez-vous PLANIFIE ou HONORE',
+  `lieu`             VARCHAR(150) DEFAULT NULL
+                     COMMENT 'Renseigne pour une collecte mobile hors les murs',
+  `statut`           ENUM('OUVERT','COMPLET','ANNULE','CLOS') NOT NULL DEFAULT 'OUVERT',
+  `date_creation`    DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_creneau_banque_date_heure` (`banque_id`, `date_creneau`, `heure_debut`),
+  KEY `idx_creneau_date` (`date_creneau`),
+  KEY `idx_creneau_statut` (`statut`),
+  CONSTRAINT `fk_creneau_banque` FOREIGN KEY (`banque_id`)
+    REFERENCES `banque` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 17. rendez_vous_don — reservation d'une place sur un creneau
+-- ---------------------------------------------------------------------
+CREATE TABLE `rendez_vous_don` (
+  `id`              INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `numero`          VARCHAR(25) NOT NULL,
+  `donneur_id`      INT UNSIGNED NOT NULL,
+  `creneau_id`      INT UNSIGNED NOT NULL,
+  `statut`          ENUM('PLANIFIE','HONORE','ANNULE','ABSENT') NOT NULL DEFAULT 'PLANIFIE',
+  `commentaire`     VARCHAR(255) DEFAULT NULL,
+  `date_creation`   DATETIME NOT NULL,
+  `date_annulation` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_rdv_numero` (`numero`),
+  UNIQUE KEY `uk_rdv_donneur_creneau` (`donneur_id`, `creneau_id`),
+  KEY `idx_rdv_statut` (`statut`),
+  CONSTRAINT `fk_rdv_donneur` FOREIGN KEY (`donneur_id`)
+    REFERENCES `donneur` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_rdv_creneau` FOREIGN KEY (`creneau_id`)
+    REFERENCES `creneau_don` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 18. don — prelevement effectivement realise
+-- ---------------------------------------------------------------------
+CREATE TABLE `don` (
+  `id`                INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `code_don`          VARCHAR(25) NOT NULL,
+  `donneur_id`        INT UNSIGNED NOT NULL,
+  `banque_id`         INT UNSIGNED NOT NULL,
+  `rendez_vous_id`    INT UNSIGNED DEFAULT NULL
+                      COMMENT 'NULL pour un don spontane, sans rendez-vous',
+  `groupe_sanguin_id` TINYINT UNSIGNED DEFAULT NULL
+                      COMMENT 'Groupe declare, confirme par la qualification',
+  `date_don`          DATETIME NOT NULL,
+  `volume_ml`         SMALLINT UNSIGNED NOT NULL DEFAULT 450,
+  `hemoglobine`       DECIMAL(4,1) DEFAULT NULL COMMENT 'g/dL releves avant prelevement',
+  `statut`            ENUM('ENREGISTRE','EN_QUALIFICATION','QUALIFIE','REJETE')
+                      NOT NULL DEFAULT 'ENREGISTRE',
+  `utilisateur_id`    INT UNSIGNED DEFAULT NULL COMMENT 'Agent qui a enregistre le don',
+  `observation`       VARCHAR(255) DEFAULT NULL,
+  `date_creation`     DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_don_code` (`code_don`),
+  UNIQUE KEY `uk_don_rendez_vous` (`rendez_vous_id`),
+  KEY `idx_don_banque_date` (`banque_id`, `date_don`),
+  KEY `idx_don_statut` (`statut`),
+  CONSTRAINT `fk_don_donneur` FOREIGN KEY (`donneur_id`)
+    REFERENCES `donneur` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_don_banque` FOREIGN KEY (`banque_id`)
+    REFERENCES `banque` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_don_rendez_vous` FOREIGN KEY (`rendez_vous_id`)
+    REFERENCES `rendez_vous_don` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_don_groupe` FOREIGN KEY (`groupe_sanguin_id`)
+    REFERENCES `groupe_sanguin` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_don_utilisateur` FOREIGN KEY (`utilisateur_id`)
+    REFERENCES `utilisateur` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
+-- 19. qualification — analyses et validation du produit sanguin
+-- ---------------------------------------------------------------------
+CREATE TABLE `qualification` (
+  `id`                 INT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `don_id`             INT UNSIGNED NOT NULL,
+  `poche_id`           INT UNSIGNED DEFAULT NULL
+                       COMMENT 'Poche creee uniquement si le resultat est CONFORME',
+  `personnel_id`       INT UNSIGNED NOT NULL COMMENT 'Utilisateur ROLE_PERSONNEL habilite',
+  `groupe_sanguin_id`  TINYINT UNSIGNED DEFAULT NULL COMMENT 'Groupe confirme au laboratoire',
+  `resultat`           ENUM('CONFORME','NON_CONFORME') NOT NULL,
+  `vih`                ENUM('NEGATIF','POSITIF','NON_FAIT') NOT NULL DEFAULT 'NON_FAIT',
+  `hepatite_b`         ENUM('NEGATIF','POSITIF','NON_FAIT') NOT NULL DEFAULT 'NON_FAIT',
+  `hepatite_c`         ENUM('NEGATIF','POSITIF','NON_FAIT') NOT NULL DEFAULT 'NON_FAIT',
+  `syphilis`           ENUM('NEGATIF','POSITIF','NON_FAIT') NOT NULL DEFAULT 'NON_FAIT',
+  `motif_rejet`        VARCHAR(255) DEFAULT NULL,
+  `date_qualification` DATETIME NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_qualification_don` (`don_id`),
+  UNIQUE KEY `uk_qualification_poche` (`poche_id`),
+  KEY `idx_qualification_resultat` (`resultat`),
+  CONSTRAINT `fk_qualification_don` FOREIGN KEY (`don_id`)
+    REFERENCES `don` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_qualification_poche` FOREIGN KEY (`poche_id`)
+    REFERENCES `poche` (`id`) ON DELETE SET NULL,
+  CONSTRAINT `fk_qualification_personnel` FOREIGN KEY (`personnel_id`)
+    REFERENCES `utilisateur` (`id`) ON DELETE RESTRICT,
+  CONSTRAINT `fk_qualification_groupe` FOREIGN KEY (`groupe_sanguin_id`)
+    REFERENCES `groupe_sanguin` (`id`) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- =====================================================================
 --  DONNEES DE REFERENCE
@@ -397,36 +559,40 @@ INSERT INTO `compatibilite` (`groupe_receveur_id`, `groupe_donneur_id`, `priorit
   (7, 7, 1);
 
 INSERT INTO `banque` (`id`, `code`, `nom`, `type`, `adresse`, `ville`, `departement`, `latitude`, `longitude`, `telephone`, `telephone_urgence`, `email`, `horaires`, `capacite_stockage`, `statut`, `date_creation`, `date_maj`) VALUES
-  (1, 'BQ-COT-001', 'CNTS — Centre national de transfusion sanguine', 'CNTS', 'Boulevard de la Marina, Akpakpa', 'Cotonou', 'Littoral', 6.3654, 2.4183, '+229 21 31 20 40', '+229 21 31 20 40', 'cot-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 900, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-16 09:30:00'),
-  (2, 'BQ-COT-002', 'CNHU-HKM — Centre national hospitalier universitaire', 'CHU', 'Avenue Jean-Paul II, Cadjèhoun', 'Cotonou', 'Littoral', 6.3703, 2.3912, '+229 21 30 01 55', '+229 21 31 20 40', 'cot-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 600, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-13 09:30:00'),
-  (3, 'BQ-COT-003', 'Hôpital de zone de Ménontin', 'HOPITAL', 'Quartier Ménontin, 12e arrondissement', 'Cotonou', 'Littoral', 6.3781, 2.3684, '+229 21 38 44 10', NULL, 'cot-003@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 250, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-27 09:30:00'),
-  (4, 'BQ-COT-004', 'Hôpital Saint-Luc', 'CLINIQUE', 'Rue 1248, Gbégamey', 'Cotonou', 'Littoral', 6.3625, 2.4026, '+229 21 32 18 76', NULL, 'cot-004@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 150, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-30 09:30:00'),
-  (5, 'BQ-ABC-001', 'Hôpital de zone d’Abomey-Calavi', 'HOPITAL', 'Carrefour Tankpè, route de Godomey', 'Abomey-Calavi', 'Atlantique', 6.4489, 2.3556, '+229 21 36 02 18', NULL, 'abc-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 300, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-13 09:30:00'),
-  (6, 'BQ-PNO-001', 'CHUD Ouémé-Plateau', 'CHU', 'Quartier Djègan-Kpèvi', 'Porto-Novo', 'Ouémé', 6.4969, 2.6289, '+229 20 21 30 12', '+229 21 31 20 40', 'pno-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 400, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-29 09:30:00'),
-  (7, 'BQ-PNO-002', 'Clinique Louis Pasteur', 'CLINIQUE', 'Avenue Pasteur, centre-ville', 'Porto-Novo', 'Ouémé', 6.4912, 2.6154, '+229 20 21 45 60', NULL, 'pno-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 120, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-10 09:30:00'),
-  (8, 'BQ-BOH-001', 'CHUD Borgou-Alibori', 'CHU', 'Route de Transa', 'Parakou', 'Borgou', 9.3372, 2.6303, '+229 23 61 07 44', '+229 21 31 20 40', 'boh-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 450, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-26 09:30:00'),
-  (9, 'BQ-ZOU-001', 'CHUD Zou-Collines', 'CHU', 'Quartier Hounli', 'Abomey', 'Zou', 7.1853, 1.9912, '+229 22 50 01 33', '+229 21 31 20 40', 'zou-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 280, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-30 09:30:00'),
-  (10, 'BQ-MON-001', 'CHUD Mono-Couffo', 'CHU', 'Route inter-États, quartier Agnivèdji', 'Lokossa', 'Mono', 6.6387, 1.7165, '+229 22 41 10 25', '+229 21 31 20 40', 'mon-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 260, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-29 09:30:00'),
-  (11, 'BQ-ATA-001', 'CHUD Atacora-Donga', 'CHU', 'Quartier Yimporima', 'Natitingou', 'Atacora', 10.3045, 1.3796, '+229 23 82 11 07', '+229 21 31 20 40', 'ata-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 220, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-02 09:30:00'),
-  (12, 'BQ-ATA-002', 'Hôpital Saint-Jean-de-Dieu', 'HOPITAL', 'Route de Porga', 'Tanguiéta', 'Atacora', 10.6212, 1.2653, '+229 23 83 00 42', NULL, 'ata-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 180, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-22 09:30:00');
+  (1, 'BQ-COT-001', 'CNTS — Centre national de transfusion sanguine', 'CNTS', 'Boulevard de la Marina, Akpakpa', 'Cotonou', 'Littoral', 6.3654, 2.4183, '+229 21 31 20 40', '+229 21 31 20 40', 'cot-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 900, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-21 09:30:00'),
+  (2, 'BQ-COT-002', 'CNHU-HKM — Centre national hospitalier universitaire', 'CHU', 'Avenue Jean-Paul II, Cadjèhoun', 'Cotonou', 'Littoral', 6.3703, 2.3912, '+229 21 30 01 55', '+229 21 31 20 40', 'cot-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 600, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-22 09:30:00'),
+  (3, 'BQ-COT-003', 'Hôpital de zone de Ménontin', 'HOPITAL', 'Quartier Ménontin, 12e arrondissement', 'Cotonou', 'Littoral', 6.3781, 2.3684, '+229 21 38 44 10', NULL, 'cot-003@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 250, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-16 09:30:00'),
+  (4, 'BQ-COT-004', 'Hôpital Saint-Luc', 'CLINIQUE', 'Rue 1248, Gbégamey', 'Cotonou', 'Littoral', 6.3625, 2.4026, '+229 21 32 18 76', NULL, 'cot-004@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 150, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-11 09:30:00'),
+  (5, 'BQ-ABC-001', 'Hôpital de zone d’Abomey-Calavi', 'HOPITAL', 'Carrefour Tankpè, route de Godomey', 'Abomey-Calavi', 'Atlantique', 6.4489, 2.3556, '+229 21 36 02 18', NULL, 'abc-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 300, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-23 09:30:00'),
+  (6, 'BQ-PNO-001', 'CHUD Ouémé-Plateau', 'CHU', 'Quartier Djègan-Kpèvi', 'Porto-Novo', 'Ouémé', 6.4969, 2.6289, '+229 20 21 30 12', '+229 21 31 20 40', 'pno-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 400, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-22 09:30:00'),
+  (7, 'BQ-PNO-002', 'Clinique Louis Pasteur', 'CLINIQUE', 'Avenue Pasteur, centre-ville', 'Porto-Novo', 'Ouémé', 6.4912, 2.6154, '+229 20 21 45 60', NULL, 'pno-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 120, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-25 09:30:00'),
+  (8, 'BQ-BOH-001', 'CHUD Borgou-Alibori', 'CHU', 'Route de Transa', 'Parakou', 'Borgou', 9.3372, 2.6303, '+229 23 61 07 44', '+229 21 31 20 40', 'boh-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 450, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-05 09:30:00'),
+  (9, 'BQ-ZOU-001', 'CHUD Zou-Collines', 'CHU', 'Quartier Hounli', 'Abomey', 'Zou', 7.1853, 1.9912, '+229 22 50 01 33', '+229 21 31 20 40', 'zou-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 280, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-12 09:30:00'),
+  (10, 'BQ-MON-001', 'CHUD Mono-Couffo', 'CHU', 'Route inter-États, quartier Agnivèdji', 'Lokossa', 'Mono', 6.6387, 1.7165, '+229 22 41 10 25', '+229 21 31 20 40', 'mon-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 260, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-18 09:30:00'),
+  (11, 'BQ-ATA-001', 'CHUD Atacora-Donga', 'CHU', 'Quartier Yimporima', 'Natitingou', 'Atacora', 10.3045, 1.3796, '+229 23 82 11 07', '+229 21 31 20 40', 'ata-001@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 220, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-16 09:30:00'),
+  (12, 'BQ-ATA-002', 'Hôpital Saint-Jean-de-Dieu', 'HOPITAL', 'Route de Porga', 'Tanguiéta', 'Atacora', 10.6212, 1.2653, '+229 23 83 00 42', NULL, 'ata-002@hemolink.bj', 'Lun-Ven 07h30-18h00 · Sam 08h00-13h00 · Urgences 24h/24', 180, 'ACTIVE', '2026-06-03 09:30:00', '2026-09-24 09:30:00');
 
 INSERT INTO `utilisateur` (`id`, `banque_id`, `email`, `mot_de_passe`, `roles`, `nom`, `prenom`, `telephone`, `actif`, `derniere_connexion`, `date_creation`) VALUES
-  (1, NULL, 'admin@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_ADMIN"]', 'ADANDE', 'Sylvestre', '+229 97 11 22 33', 1, '2026-09-29 19:30:00', '2026-06-23 09:30:00'),
-  (2, 1, 'gestionnaire.cnts@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'HOUNKPATIN', 'Rachelle', '+229 97 44 55 66', 1, '2026-09-30 12:30:00', '2026-06-23 09:30:00'),
-  (3, 2, 'gestionnaire.cnhu@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'TOSSOU', 'Marius', '+229 96 10 20 30', 1, '2026-09-30 12:30:00', '2026-06-23 09:30:00'),
-  (4, 6, 'gestionnaire.chud-oueme@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'AGOSSOU', 'Delphine', '+229 95 77 88 99', 1, '2026-09-30 00:30:00', '2026-06-23 09:30:00'),
-  (5, 8, 'gestionnaire.chud-borgou@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'SEIDOU', 'Abdoulaye', '+229 94 12 34 56', 1, '2026-10-01 07:30:00', '2026-06-23 09:30:00'),
-  (6, 1, 'agent.cnts@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'KOTCHOFA', 'Pélagie', '+229 97 65 43 21', 1, '2026-09-30 07:30:00', '2026-06-23 09:30:00'),
-  (7, 2, 'agent.cnhu@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'DOSSOU', 'Ibrahim', '+229 96 98 76 54', 1, '2026-09-29 18:30:00', '2026-06-23 09:30:00'),
-  (8, 6, 'agent.chud-oueme@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'AHOYO', 'Clarisse', '+229 95 32 10 98', 1, '2026-10-01 05:30:00', '2026-06-23 09:30:00');
+  (1, NULL, 'admin@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_ADMIN"]', 'ADANDE', 'Sylvestre', '+229 97 11 22 33', 1, '2026-09-30 14:30:00', '2026-06-23 09:30:00'),
+  (2, 1, 'gestionnaire.cnts@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'HOUNKPATIN', 'Rachelle', '+229 97 44 55 66', 1, '2026-09-30 11:30:00', '2026-06-23 09:30:00'),
+  (3, 2, 'gestionnaire.cnhu@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'TOSSOU', 'Marius', '+229 96 10 20 30', 1, '2026-10-01 07:30:00', '2026-06-23 09:30:00'),
+  (4, 6, 'gestionnaire.chud-oueme@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'AGOSSOU', 'Delphine', '+229 95 77 88 99', 1, '2026-09-30 08:30:00', '2026-06-23 09:30:00'),
+  (5, 8, 'gestionnaire.chud-borgou@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_GESTIONNAIRE"]', 'SEIDOU', 'Abdoulaye', '+229 94 12 34 56', 1, '2026-09-30 11:30:00', '2026-06-23 09:30:00'),
+  (6, 1, 'agent.cnts@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'KOTCHOFA', 'Pélagie', '+229 97 65 43 21', 1, '2026-09-29 06:30:00', '2026-06-23 09:30:00'),
+  (7, 2, 'agent.cnhu@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'DOSSOU', 'Ibrahim', '+229 96 98 76 54', 1, '2026-09-30 03:30:00', '2026-06-23 09:30:00'),
+  (8, 6, 'agent.chud-oueme@hemolink.bj', '$2y$12$dMCaCQME1obVw3hSAHDcYuXm8M7RU7a2zW/RtOBbSCyQEQzr3M5qm', '["ROLE_AGENT"]', 'AHOYO', 'Clarisse', '+229 95 32 10 98', 1, '2026-09-29 05:30:00', '2026-06-23 09:30:00'),
+  (9, 1, 'biologiste.cnts@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_PERSONNEL"]', 'AKPOVI', 'Félicienne', '+229 97 20 41 83', 1, '2026-09-28 13:30:00', '2026-06-23 09:30:00'),
+  (10, 2, 'biologiste.cnhu@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_PERSONNEL"]', 'LAWANI', 'Boubacar', '+229 96 57 19 02', 1, '2026-09-29 08:30:00', '2026-06-23 09:30:00'),
+  (11, NULL, 'donneur.sossou@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_DONNEUR"]', 'SOSSOU', 'Armand', '+229 97 31 76 20', 1, '2026-09-30 07:30:00', '2026-06-23 09:30:00'),
+  (12, NULL, 'donneur.tognon@hemolink.bj', '$2y$12$r9kupNqOz4Ebw7L7k6cM7ektbeGbkATI9lQTr2zdqqkIiWfvD9WP.', '["ROLE_DONNEUR"]', 'TOGNON', 'Mireille', '+229 96 44 08 15', 1, '2026-09-30 13:30:00', '2026-06-23 09:30:00');
 
 INSERT INTO `demandeur` (`id`, `type`, `nom`, `responsable`, `telephone`, `email`, `adresse`, `ville`, `numero_agrement`, `date_creation`) VALUES
-  (1, 'ETABLISSEMENT', 'Clinique Mahouna', 'Dr Félicien AGBODJAN', '+229 97 20 30 40', 'contact@mahouna.bj', 'Rue 420, Fidjrossè', 'Cotonou', 'AGR-2021-0147', '2026-07-07 09:30:00'),
-  (2, 'ETABLISSEMENT', 'Hôpital de zone de Sèmè-Kpodji', 'Dr Nadège KPOGNON', '+229 96 51 62 73', 'hz.seme@sante.gouv.bj', 'Route de Lagos', 'Sèmè-Kpodji', 'AGR-2019-0032', '2025-12-20 09:30:00'),
-  (3, 'ETABLISSEMENT', 'Centre médical Bon Samaritain', 'Mme Estelle ZINSOU', '+229 95 14 25 36', 'bonsamaritain@gmail.com', 'Quartier Vêdoko', 'Cotonou', 'AGR-2022-0211', '2026-03-26 09:30:00'),
-  (4, 'ETABLISSEMENT', 'Clinique de l’Étoile', 'Dr Rodrigue AÏVODJI', '+229 97 83 94 05', 'etoile.clinique@yahoo.fr', 'Avenue Pape Jean-Paul II', 'Porto-Novo', 'AGR-2020-0088', '2026-04-08 09:30:00'),
-  (5, 'PARTICULIER', 'FAMILLE SOGLO', 'Jean SOGLO', '+229 94 46 57 68', NULL, 'Quartier Zogbo', 'Cotonou', NULL, '2026-08-22 09:30:00'),
-  (6, 'ETABLISSEMENT', 'Hôpital évangélique Bethesda', 'Dr Pauline HOUNSOU', '+229 21 33 44 55', 'bethesda@hopital.bj', 'Rue 1105, Akpakpa', 'Cotonou', 'AGR-2018-0015', '2026-01-15 09:30:00');
+  (1, 'ETABLISSEMENT', 'Clinique Mahouna', 'Dr Félicien AGBODJAN', '+229 97 20 30 40', 'contact@mahouna.bj', 'Rue 420, Fidjrossè', 'Cotonou', 'AGR-2021-0147', '2026-08-22 09:30:00'),
+  (2, 'ETABLISSEMENT', 'Hôpital de zone de Sèmè-Kpodji', 'Dr Nadège KPOGNON', '+229 96 51 62 73', 'hz.seme@sante.gouv.bj', 'Route de Lagos', 'Sèmè-Kpodji', 'AGR-2019-0032', '2026-04-06 09:30:00'),
+  (3, 'ETABLISSEMENT', 'Centre médical Bon Samaritain', 'Mme Estelle ZINSOU', '+229 95 14 25 36', 'bonsamaritain@gmail.com', 'Quartier Vêdoko', 'Cotonou', 'AGR-2022-0211', '2026-06-11 09:30:00'),
+  (4, 'ETABLISSEMENT', 'Clinique de l’Étoile', 'Dr Rodrigue AÏVODJI', '+229 97 83 94 05', 'etoile.clinique@yahoo.fr', 'Avenue Pape Jean-Paul II', 'Porto-Novo', 'AGR-2020-0088', '2025-12-25 09:30:00'),
+  (5, 'PARTICULIER', 'FAMILLE SOGLO', 'Jean SOGLO', '+229 94 46 57 68', NULL, 'Quartier Zogbo', 'Cotonou', NULL, '2026-08-10 09:30:00'),
+  (6, 'ETABLISSEMENT', 'Hôpital évangélique Bethesda', 'Dr Pauline HOUNSOU', '+229 21 33 44 55', 'bethesda@hopital.bj', 'Rue 1105, Akpakpa', 'Cotonou', 'AGR-2018-0015', '2026-04-22 09:30:00');
 
 INSERT INTO `parametre` (`cle`, `valeur`, `libelle`, `type`, `date_maj`) VALUES
   ('rayon_recherche_km', '25', 'Rayon par défaut de la recherche de banques', 'NOMBRE', '2026-09-01 09:30:00'),
@@ -439,6 +605,13 @@ INSERT INTO `parametre` (`cle`, `valeur`, `libelle`, `type`, `date_maj`) VALUES
   ('organisation', 'Centre national de transfusion sanguine du Bénin', 'Organisation propriétaire de la plateforme', 'TEXTE', '2026-09-01 09:30:00'),
   ('email_contact', 'contact@hemolink.bj', 'Adresse de contact affichée', 'TEXTE', '2026-09-01 09:30:00'),
   ('telephone_urgence', '+229 21 31 20 40', 'Numéro d’urgence affiché sur la carte', 'TEXTE', '2026-09-01 09:30:00'),
+  ('capacite_creneau_defaut', '8', 'Nombre de donneurs accueillis par créneau', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('delai_annulation_rdv_h', '12', 'Délai minimal avant le créneau pour annuler ou déplacer un rendez-vous', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('delai_entre_dons_jours', '90', 'Intervalle minimal entre deux dons de sang total', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('age_min_don', '18', 'Âge minimal pour donner son sang', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('age_max_don', '65', 'Âge maximal pour donner son sang', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('hemoglobine_min_femme', '12.0', 'Taux d’hémoglobine minimal avant prélèvement, en g/dL (femme)', 'TEXTE', '2026-09-01 09:30:00'),
+  ('hemoglobine_min_homme', '13.0', 'Taux d’hémoglobine minimal avant prélèvement, en g/dL (homme)', 'TEXTE', '2026-09-01 09:30:00'),
   ('version_schema', '1.0', 'Version du schéma de base de données', 'TEXTE', '2026-09-01 09:30:00');
 
 
@@ -1193,7 +1366,19 @@ INSERT INTO `mouvement_stock` (`id`, `banque_id`, `groupe_sanguin_id`, `poche_id
   (9, 6, 1, NULL, 'ENTREE', 10, 14, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-29 09:30:00'),
   (10, 8, 5, NULL, 'ENTREE', 6, 5, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-30 09:30:00'),
   (11, 5, 1, NULL, 'ENTREE', 7, 5, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-30 09:30:00'),
-  (12, 4, 6, NULL, 'PEREMPTION', -2, 0, NULL, 2, 'Poches périmées — destruction tracée', '2026-09-29 09:30:00');
+  (12, 4, 6, NULL, 'PEREMPTION', -2, 0, NULL, 2, 'Poches périmées — destruction tracée', '2026-09-29 09:30:00'),
+  (13, 1, 1, 7, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0001', '2026-09-25 10:05:00'),
+  (14, 1, 1, 8, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0002', '2026-09-29 10:05:00'),
+  (15, 1, 1, 9, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0003', '2026-09-27 12:05:00'),
+  (16, 1, 1, 12, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0004', '2026-09-25 11:20:00'),
+  (17, 1, 1, 13, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0005', '2026-09-25 12:40:00'),
+  (18, 1, 2, 25, 'ENTREE', 1, 14, NULL, 9, 'Qualification conforme du don DON-01-2026-0006', '2026-09-30 10:20:00'),
+  (19, 2, 1, 109, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-02-2026-0007', '2026-09-27 11:20:00'),
+  (20, 2, 1, 112, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-02-2026-0008', '2026-09-27 13:20:00'),
+  (21, 2, 2, 118, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0009', '2026-09-26 12:20:00'),
+  (22, 2, 2, 121, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0010', '2026-09-26 10:20:00'),
+  (23, 2, 3, 128, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0011', '2026-10-01 13:40:00'),
+  (24, 2, 5, 138, 'ENTREE', 1, 11, NULL, 10, 'Qualification conforme du don DON-02-2026-0012', '2026-09-26 12:05:00');
 
 INSERT INTO `notification_sms` (`id`, `destinataire`, `message`, `type`, `precommande_id`, `statut`, `tentatives`, `date_creation`, `date_envoi`, `erreur`) VALUES
   (1, '+229 97 20 30 40', 'HemoLink : votre precommande PRE-COT-2026-00001 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 1, 'ENVOYE', 1, '2026-09-25 09:30:00', '2026-09-25 09:30:12', NULL),
@@ -1202,7 +1387,12 @@ INSERT INTO `notification_sms` (`id`, `destinataire`, `message`, `type`, `precom
   (4, '+229 21 33 44 55', 'HemoLink : votre precommande PRE-COT-2026-00003 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 3, 'ENVOYE', 1, '2026-09-30 06:30:00', '2026-09-30 06:30:12', NULL),
   (5, '+229 97 83 94 05', 'HemoLink : votre precommande PRE-COT-2026-00004 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 4, 'ENVOYE', 1, '2026-09-30 10:30:00', '2026-09-30 10:30:12', NULL),
   (6, '+229 97 20 30 40', 'HemoLink : la precommande PRE-COT-2026-00007 a ete annulee.', 'AUTRE', 7, 'ECHEC', 3, '2026-09-27 12:30:00', NULL, 'Operateur injoignable (timeout 30s)'),
-  (7, '+229 95 77 88 99', 'HemoLink : rupture de B- a CHUD Ouémé-Plateau. Stock a 0 poche, pensez a lancer une collecte.', 'ALERTE_RUPTURE', NULL, 'ENVOYE', 1, '2026-10-01 06:30:00', '2026-10-01 06:30:07', NULL);
+  (7, '+229 95 77 88 99', 'HemoLink : rupture de B- a CHUD Ouémé-Plateau. Stock a 0 poche, pensez a lancer une collecte.', 'ALERTE_RUPTURE', NULL, 'ENVOYE', 1, '2026-10-01 06:30:00', '2026-10-01 06:30:07', NULL),
+  (8, '+229 97 31 76 20', 'HemoLink : rendez-vous de don RDV-2026-00017 le 05/10/2026 a 08:00 - CNTS. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-09-26 09:00:00', '2026-09-26 09:00:08', NULL),
+  (9, '+229 96 44 08 15', 'HemoLink : rendez-vous de don RDV-2026-00018 le 07/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-02 09:00:00', '2026-10-02 09:00:08', NULL),
+  (10, '+229 94 76 55 12', 'HemoLink : rendez-vous de don RDV-2026-00019 le 03/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-01 09:00:00', '2026-10-01 09:00:08', NULL),
+  (11, '+229 96 31 90 44', 'HemoLink : rendez-vous de don RDV-2026-00020 le 09/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-07 09:00:00', '2026-10-07 09:00:08', NULL),
+  (12, '+229 97 45 83 06', 'HemoLink : rendez-vous de don RDV-2026-00021 le 12/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-08 09:00:00', '2026-10-08 09:00:08', NULL);
 
 INSERT INTO `compteur` (`cle`, `prefixe`, `annee`, `valeur`, `date_maj`) VALUES
   ('PRECOMMANDE-COT-2026', 'PRE-COT', 2026, 7, '2026-10-01 09:30:00'),
@@ -1214,7 +1404,305 @@ INSERT INTO `journal` (`id`, `utilisateur_id`, `action`, `entite`, `entite_id`, 
   (3, 3, 'CONFIRMATION', 'Precommande', 2, 'Précommande PRE-COT-2026-00002 confirmée', '41.79.12.90', '2026-09-29 09:30:00'),
   (4, 2, 'CREATION', 'Utilisateur', 6, 'Création du compte agent.cnts@hemolink.bj', '41.79.12.84', '2026-09-26 09:30:00'),
   (5, NULL, 'PRECOMMANDE', 'Precommande', 6, 'Précommande PRE-COT-2026-00006 déposée depuis le site public', '197.234.221.17', '2026-10-01 04:30:00'),
-  (6, 1, 'SAUVEGARDE', 'Systeme', NULL, 'Sauvegarde quotidienne : hemolink_2026-09-30.sql', '127.0.0.1', '2026-10-01 00:30:00');
+  (6, 1, 'SAUVEGARDE', 'Systeme', NULL, 'Sauvegarde quotidienne : hemolink_2026-09-30.sql', '127.0.0.1', '2026-10-01 00:30:00'),
+  (7, 9, 'QUALIFICATION', 'Don', 13, 'Don DON-01-2026-0013 declare non conforme : aucune poche mise en stock', '41.79.12.91', '2026-09-27 12:30:00'),
+  (8, 10, 'QUALIFICATION', 'Don', 14, 'Don DON-02-2026-0014 declare non conforme : aucune poche mise en stock', '41.79.12.92', '2026-09-29 12:30:00'),
+  (9, 9, 'QUALIFICATION', 'Don', 1, '12 produits qualifies conformes et mis en stock', '41.79.12.91', '2026-10-01 03:30:00');
+
+
+-- =====================================================================
+--  MODULE DON : donneurs, creneaux, rendez-vous, dons, qualification
+-- =====================================================================
+
+INSERT INTO `donneur` (`id`, `utilisateur_id`, `groupe_sanguin_id`, `numero_donneur`, `nom`, `prenom`, `sexe`, `date_naissance`, `telephone`, `email`, `ville`, `dernier_don`, `nombre_dons`, `apte`, `motif_inaptitude`, `date_creation`) VALUES
+  (1, 11, 1, 'DN-2026-00001', 'SOSSOU', 'Armand', 'M', '1991-03-14', '+229 97 31 76 20', 'donneur.sossou@hemolink.bj', 'Cotonou', '2026-09-28', 13, 1, NULL, '2025-10-05 09:30:00'),
+  (2, 12, 3, 'DN-2026-00002', 'TOGNON', 'Mireille', 'F', '1996-11-02', '+229 96 44 08 15', 'donneur.tognon@hemolink.bj', 'Cotonou', '2026-09-30', 4, 1, NULL, '2025-08-25 09:30:00'),
+  (3, NULL, 5, 'DN-2026-00003', 'ADJOVI', 'Cyrille', 'M', '1988-06-25', '+229 95 12 63 40', 'adjovi.cyrille@exemple.bj', 'Abomey-Calavi', '2026-09-26', 11, 1, NULL, '2025-03-12 09:30:00'),
+  (4, NULL, 2, 'DN-2026-00004', 'DANSOU', 'Prudencia', 'F', '2001-01-30', '+229 94 76 55 12', 'dansou.prudencia@exemple.bj', 'Cotonou', '2026-09-29', 5, 1, NULL, '2024-06-18 09:30:00'),
+  (5, NULL, 7, 'DN-2026-00005', 'KPADONOU', 'Serge', 'M', '1979-09-08', '+229 97 08 22 71', 'kpadonou.serge@exemple.bj', 'Porto-Novo', '2026-09-28', 12, 1, NULL, '2024-07-11 09:30:00'),
+  (6, NULL, 4, 'DN-2026-00006', 'BIO SIKA', 'Nadège', 'F', '1994-04-17', '+229 96 31 90 44', 'biosika.nadège@exemple.bj', 'Parakou', NULL, 4, 1, NULL, '2024-04-25 09:30:00'),
+  (7, NULL, NULL, 'DN-2026-00007', 'ZINSOU', 'Hervé', 'M', '1999-12-05', '+229 95 60 17 38', 'zinsou.hervé@exemple.bj', 'Porto-Novo', '2026-09-30', 1, 1, NULL, '2025-08-15 09:30:00'),
+  (8, NULL, 1, 'DN-2026-00008', 'GANDONOU', 'Reine', 'F', '1985-07-21', '+229 97 45 83 06', 'gandonou.reine@exemple.bj', 'Cotonou', '2026-09-30', 8, 1, NULL, '2024-05-07 09:30:00');
+
+INSERT INTO `creneau_don` (`id`, `banque_id`, `date_creneau`, `heure_debut`, `heure_fin`, `capacite`, `places_reservees`, `lieu`, `statut`, `date_creation`) VALUES
+  (1, 1, '2026-09-24', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (2, 1, '2026-09-24', '10:00:00', '12:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (3, 1, '2026-09-24', '15:00:00', '17:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (4, 1, '2026-09-25', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (5, 1, '2026-09-25', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (6, 1, '2026-09-25', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (7, 1, '2026-09-26', '08:00:00', '10:00:00', 8, 2, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (8, 1, '2026-09-26', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (9, 1, '2026-09-28', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (10, 1, '2026-09-28', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (11, 1, '2026-09-28', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (12, 1, '2026-09-29', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (13, 1, '2026-09-29', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (14, 1, '2026-09-29', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (15, 1, '2026-09-30', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (16, 1, '2026-09-30', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (17, 1, '2026-09-30', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (18, 1, '2026-10-01', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (19, 1, '2026-10-01', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (20, 1, '2026-10-01', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (21, 1, '2026-10-02', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (22, 1, '2026-10-02', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (23, 1, '2026-10-02', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (24, 1, '2026-10-03', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (25, 1, '2026-10-03', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (26, 1, '2026-10-05', '08:00:00', '10:00:00', 8, 1, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (27, 1, '2026-10-05', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (28, 1, '2026-10-05', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (29, 1, '2026-10-06', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (30, 1, '2026-10-06', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (31, 1, '2026-10-06', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (32, 1, '2026-10-07', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (33, 1, '2026-10-07', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (34, 1, '2026-10-07', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (35, 1, '2026-10-08', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (36, 1, '2026-10-08', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (37, 1, '2026-10-08', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (38, 1, '2026-10-09', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (39, 1, '2026-10-09', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (40, 1, '2026-10-09', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (41, 1, '2026-10-10', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (42, 1, '2026-10-10', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (43, 1, '2026-10-12', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (44, 1, '2026-10-12', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (45, 1, '2026-10-12', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (46, 1, '2026-10-13', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (47, 1, '2026-10-13', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (48, 1, '2026-10-13', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (49, 1, '2026-10-14', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (50, 1, '2026-10-14', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (51, 1, '2026-10-14', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (52, 1, '2026-10-15', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (53, 1, '2026-10-15', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (54, 1, '2026-10-15', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (55, 2, '2026-09-24', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (56, 2, '2026-09-24', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (57, 2, '2026-09-24', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (58, 2, '2026-09-25', '08:00:00', '10:00:00', 8, 2, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (59, 2, '2026-09-25', '10:00:00', '12:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (60, 2, '2026-09-25', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00');
+INSERT INTO `creneau_don` (`id`, `banque_id`, `date_creneau`, `heure_debut`, `heure_fin`, `capacite`, `places_reservees`, `lieu`, `statut`, `date_creation`) VALUES
+  (61, 2, '2026-09-26', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (62, 2, '2026-09-26', '10:00:00', '12:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (63, 2, '2026-09-28', '08:00:00', '10:00:00', 8, 1, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (64, 2, '2026-09-28', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (65, 2, '2026-09-28', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (66, 2, '2026-09-29', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (67, 2, '2026-09-29', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (68, 2, '2026-09-29', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (69, 2, '2026-09-30', '08:00:00', '10:00:00', 8, 2, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (70, 2, '2026-09-30', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (71, 2, '2026-09-30', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (72, 2, '2026-10-01', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (73, 2, '2026-10-01', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (74, 2, '2026-10-01', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (75, 2, '2026-10-02', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (76, 2, '2026-10-02', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (77, 2, '2026-10-02', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (78, 2, '2026-10-03', '08:00:00', '10:00:00', 8, 1, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (79, 2, '2026-10-03', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (80, 2, '2026-10-05', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (81, 2, '2026-10-05', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (82, 2, '2026-10-05', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (83, 2, '2026-10-06', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (84, 2, '2026-10-06', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (85, 2, '2026-10-06', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (86, 2, '2026-10-07', '08:00:00', '10:00:00', 8, 1, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (87, 2, '2026-10-07', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (88, 2, '2026-10-07', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (89, 2, '2026-10-08', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (90, 2, '2026-10-08', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (91, 2, '2026-10-08', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (92, 2, '2026-10-09', '08:00:00', '10:00:00', 8, 1, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (93, 2, '2026-10-09', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (94, 2, '2026-10-09', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (95, 2, '2026-10-10', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (96, 2, '2026-10-10', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (97, 2, '2026-10-12', '08:00:00', '10:00:00', 8, 1, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (98, 2, '2026-10-12', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (99, 2, '2026-10-12', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (100, 2, '2026-10-13', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (101, 2, '2026-10-13', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (102, 2, '2026-10-13', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (103, 2, '2026-10-14', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (104, 2, '2026-10-14', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (105, 2, '2026-10-14', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (106, 2, '2026-10-15', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (107, 2, '2026-10-15', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (108, 2, '2026-10-15', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (109, 6, '2026-09-24', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (110, 6, '2026-09-24', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (111, 6, '2026-09-24', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (112, 6, '2026-09-25', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (113, 6, '2026-09-25', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (114, 6, '2026-09-25', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (115, 6, '2026-09-26', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (116, 6, '2026-09-26', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (117, 6, '2026-09-28', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (118, 6, '2026-09-28', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (119, 6, '2026-09-28', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (120, 6, '2026-09-29', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00');
+INSERT INTO `creneau_don` (`id`, `banque_id`, `date_creneau`, `heure_debut`, `heure_fin`, `capacite`, `places_reservees`, `lieu`, `statut`, `date_creation`) VALUES
+  (121, 6, '2026-09-29', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (122, 6, '2026-09-29', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (123, 6, '2026-09-30', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (124, 6, '2026-09-30', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (125, 6, '2026-09-30', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (126, 6, '2026-10-01', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (127, 6, '2026-10-01', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (128, 6, '2026-10-01', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (129, 6, '2026-10-02', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (130, 6, '2026-10-02', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (131, 6, '2026-10-02', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (132, 6, '2026-10-03', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (133, 6, '2026-10-03', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (134, 6, '2026-10-05', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (135, 6, '2026-10-05', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (136, 6, '2026-10-05', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (137, 6, '2026-10-06', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (138, 6, '2026-10-06', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (139, 6, '2026-10-06', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (140, 6, '2026-10-07', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (141, 6, '2026-10-07', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (142, 6, '2026-10-07', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (143, 6, '2026-10-08', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (144, 6, '2026-10-08', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (145, 6, '2026-10-08', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (146, 6, '2026-10-09', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (147, 6, '2026-10-09', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (148, 6, '2026-10-09', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (149, 6, '2026-10-10', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (150, 6, '2026-10-10', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (151, 6, '2026-10-12', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (152, 6, '2026-10-12', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (153, 6, '2026-10-12', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (154, 6, '2026-10-13', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (155, 6, '2026-10-13', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (156, 6, '2026-10-13', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (157, 6, '2026-10-14', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (158, 6, '2026-10-14', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (159, 6, '2026-10-14', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (160, 6, '2026-10-15', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (161, 6, '2026-10-15', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (162, 6, '2026-10-15', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (163, 8, '2026-09-24', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (164, 8, '2026-09-24', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (165, 8, '2026-09-24', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (166, 8, '2026-09-25', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (167, 8, '2026-09-25', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (168, 8, '2026-09-25', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (169, 8, '2026-09-26', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (170, 8, '2026-09-26', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (171, 8, '2026-09-28', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (172, 8, '2026-09-28', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (173, 8, '2026-09-28', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (174, 8, '2026-09-29', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (175, 8, '2026-09-29', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (176, 8, '2026-09-29', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (177, 8, '2026-09-30', '08:00:00', '10:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (178, 8, '2026-09-30', '10:00:00', '12:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (179, 8, '2026-09-30', '15:00:00', '17:00:00', 8, 0, NULL, 'CLOS', '2026-09-10 09:30:00'),
+  (180, 8, '2026-10-01', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00');
+INSERT INTO `creneau_don` (`id`, `banque_id`, `date_creneau`, `heure_debut`, `heure_fin`, `capacite`, `places_reservees`, `lieu`, `statut`, `date_creation`) VALUES
+  (181, 8, '2026-10-01', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (182, 8, '2026-10-01', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (183, 8, '2026-10-02', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (184, 8, '2026-10-02', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (185, 8, '2026-10-02', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (186, 8, '2026-10-03', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (187, 8, '2026-10-03', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (188, 8, '2026-10-05', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (189, 8, '2026-10-05', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (190, 8, '2026-10-05', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (191, 8, '2026-10-06', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (192, 8, '2026-10-06', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (193, 8, '2026-10-06', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (194, 8, '2026-10-07', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (195, 8, '2026-10-07', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (196, 8, '2026-10-07', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (197, 8, '2026-10-08', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (198, 8, '2026-10-08', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (199, 8, '2026-10-08', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (200, 8, '2026-10-09', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (201, 8, '2026-10-09', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (202, 8, '2026-10-09', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (203, 8, '2026-10-10', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (204, 8, '2026-10-10', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (205, 8, '2026-10-12', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (206, 8, '2026-10-12', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (207, 8, '2026-10-12', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (208, 8, '2026-10-13', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (209, 8, '2026-10-13', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (210, 8, '2026-10-13', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (211, 8, '2026-10-14', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (212, 8, '2026-10-14', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (213, 8, '2026-10-14', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (214, 8, '2026-10-15', '08:00:00', '10:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (215, 8, '2026-10-15', '10:00:00', '12:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00'),
+  (216, 8, '2026-10-15', '15:00:00', '17:00:00', 8, 0, NULL, 'OUVERT', '2026-09-10 09:30:00');
+
+INSERT INTO `rendez_vous_don` (`id`, `numero`, `donneur_id`, `creneau_id`, `statut`, `commentaire`, `date_creation`, `date_annulation`) VALUES
+  (1, 'RDV-2026-00001', 1, 1, 'HONORE', NULL, '2026-09-15 09:00:00', NULL),
+  (2, 'RDV-2026-00002', 1, 9, 'HONORE', NULL, '2026-09-24 09:00:00', NULL),
+  (3, 'RDV-2026-00003', 1, 7, 'HONORE', NULL, '2026-09-20 09:00:00', NULL),
+  (4, 'RDV-2026-00004', 1, 2, 'HONORE', NULL, '2026-09-22 09:00:00', NULL),
+  (5, 'RDV-2026-00005', 1, 3, 'HONORE', NULL, '2026-09-17 09:00:00', NULL),
+  (6, 'RDV-2026-00006', 4, 12, 'HONORE', NULL, '2026-09-22 09:00:00', NULL),
+  (7, 'RDV-2026-00007', 1, 61, 'HONORE', NULL, '2026-09-19 09:00:00', NULL),
+  (8, 'RDV-2026-00008', 1, 62, 'HONORE', NULL, '2026-09-23 09:00:00', NULL),
+  (9, 'RDV-2026-00009', 4, 58, 'HONORE', NULL, '2026-09-16 09:00:00', NULL),
+  (10, 'RDV-2026-00010', 4, 59, 'HONORE', NULL, '2026-09-16 09:00:00', NULL),
+  (11, 'RDV-2026-00011', 2, 69, 'HONORE', NULL, '2026-09-24 09:00:00', NULL),
+  (12, 'RDV-2026-00012', 3, 58, 'HONORE', NULL, '2026-09-19 09:00:00', NULL),
+  (13, 'RDV-2026-00013', 3, 7, 'HONORE', NULL, '2026-09-21 09:00:00', NULL),
+  (14, 'RDV-2026-00014', 5, 63, 'HONORE', NULL, '2026-09-22 09:00:00', NULL),
+  (15, 'RDV-2026-00015', 8, 15, 'HONORE', NULL, '2026-09-27 09:00:00', NULL),
+  (16, 'RDV-2026-00016', 7, 69, 'HONORE', NULL, '2026-09-24 09:00:00', NULL),
+  (17, 'RDV-2026-00017', 1, 26, 'PLANIFIE', NULL, '2026-09-26 09:00:00', NULL),
+  (18, 'RDV-2026-00018', 2, 86, 'PLANIFIE', NULL, '2026-10-02 09:00:00', NULL),
+  (19, 'RDV-2026-00019', 4, 78, 'PLANIFIE', NULL, '2026-10-01 09:00:00', NULL),
+  (20, 'RDV-2026-00020', 6, 92, 'PLANIFIE', NULL, '2026-10-07 09:00:00', NULL),
+  (21, 'RDV-2026-00021', 8, 97, 'PLANIFIE', NULL, '2026-10-08 09:00:00', NULL),
+  (22, 'RDV-2026-00022', 3, 29, 'ANNULE', NULL, '2026-10-02 09:00:00', '2026-09-30 09:30:00'),
+  (23, 'RDV-2026-00023', 4, 61, 'ABSENT', NULL, '2026-09-23 09:00:00', NULL);
+
+INSERT INTO `don` (`id`, `code_don`, `donneur_id`, `banque_id`, `rendez_vous_id`, `groupe_sanguin_id`, `date_don`, `volume_ml`, `hemoglobine`, `statut`, `utilisateur_id`, `observation`, `date_creation`) VALUES
+  (1, 'DON-01-2026-0001', 1, 1, 1, 1, '2026-09-24 08:05:00', 450, 14.5, 'QUALIFIE', 6, NULL, '2026-09-24 08:05:00'),
+  (2, 'DON-01-2026-0002', 1, 1, 2, 1, '2026-09-28 08:05:00', 450, 15.7, 'QUALIFIE', 6, NULL, '2026-09-28 08:05:00'),
+  (3, 'DON-01-2026-0003', 1, 1, 3, 1, '2026-09-26 10:05:00', 250, 13.1, 'QUALIFIE', 6, NULL, '2026-09-26 10:05:00'),
+  (4, 'DON-01-2026-0004', 1, 1, 4, 1, '2026-09-24 09:20:00', 350, 12.6, 'QUALIFIE', 6, NULL, '2026-09-24 09:20:00'),
+  (5, 'DON-01-2026-0005', 1, 1, 5, 1, '2026-09-24 10:40:00', 450, 12.7, 'QUALIFIE', 6, NULL, '2026-09-24 10:40:00'),
+  (6, 'DON-01-2026-0006', 4, 1, 6, 2, '2026-09-29 08:20:00', 350, 15.0, 'QUALIFIE', 6, NULL, '2026-09-29 08:20:00'),
+  (7, 'DON-02-2026-0007', 1, 2, 7, 1, '2026-09-26 09:20:00', 450, 12.7, 'QUALIFIE', 7, NULL, '2026-09-26 09:20:00'),
+  (8, 'DON-02-2026-0008', 1, 2, 8, 1, '2026-09-26 11:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-26 11:20:00'),
+  (9, 'DON-02-2026-0009', 4, 2, 9, 2, '2026-09-25 10:20:00', 350, 12.5, 'QUALIFIE', 7, NULL, '2026-09-25 10:20:00'),
+  (10, 'DON-02-2026-0010', 4, 2, 10, 2, '2026-09-25 08:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-25 08:20:00'),
+  (11, 'DON-02-2026-0011', 2, 2, 11, 3, '2026-09-30 11:40:00', 450, 14.8, 'QUALIFIE', 7, NULL, '2026-09-30 11:40:00'),
+  (12, 'DON-02-2026-0012', 3, 2, 12, 5, '2026-09-25 10:05:00', 250, 16.0, 'QUALIFIE', 7, NULL, '2026-09-25 10:05:00'),
+  (13, 'DON-01-2026-0013', 3, 1, 13, NULL, '2026-09-26 09:30:00', 450, 13.9, 'REJETE', 6, 'Produit ecarte apres analyses', '2026-09-26 09:30:00'),
+  (14, 'DON-02-2026-0014', 5, 2, 14, NULL, '2026-09-28 09:30:00', 450, 13.2, 'REJETE', 7, 'Produit ecarte apres analyses', '2026-09-28 09:30:00'),
+  (15, 'DON-01-2026-0015', 8, 1, 15, 1, '2026-09-30 10:10:00', 450, 15.0, 'EN_QUALIFICATION', 6, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00'),
+  (16, 'DON-02-2026-0016', 7, 2, 16, NULL, '2026-09-30 10:10:00', 450, 12.9, 'EN_QUALIFICATION', 7, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00');
+
+INSERT INTO `qualification` (`id`, `don_id`, `poche_id`, `personnel_id`, `groupe_sanguin_id`, `resultat`, `vih`, `hepatite_b`, `hepatite_c`, `syphilis`, `motif_rejet`, `date_qualification`) VALUES
+  (1, 1, 7, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-25 10:05:00'),
+  (2, 2, 8, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-29 10:05:00'),
+  (3, 3, 9, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-27 12:05:00'),
+  (4, 4, 12, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-25 11:20:00'),
+  (5, 5, 13, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-25 12:40:00'),
+  (6, 6, 25, 9, 2, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-30 10:20:00'),
+  (7, 7, 109, 10, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-27 11:20:00'),
+  (8, 8, 112, 10, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-27 13:20:00'),
+  (9, 9, 118, 10, 2, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-26 12:20:00'),
+  (10, 10, 121, 10, 2, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-26 10:20:00'),
+  (11, 11, 128, 10, 3, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-10-01 13:40:00'),
+  (12, 12, 138, 10, 5, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-26 12:05:00'),
+  (13, 13, NULL, 9, NULL, 'NON_CONFORME', 'NEGATIF', 'POSITIF', 'NEGATIF', 'NEGATIF', 'Serologie hepatite B positive : produit detruit, donneur oriente vers une consultation medicale', '2026-09-27 12:30:00'),
+  (14, 14, NULL, 10, NULL, 'NON_CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'POSITIF', 'Serologie syphilis positive : produit detruit selon la procedure du laboratoire', '2026-09-29 12:30:00');
 
 
 -- =====================================================================
@@ -1254,6 +1742,24 @@ JOIN `groupe_sanguin` g    ON g.`id` = l.`groupe_sanguin_id`
 JOIN `banque` b            ON b.`id` = p.`banque_id`
 JOIN `demandeur` d         ON d.`id` = p.`demandeur_id`
 WHERE p.`statut` IN ('EN_ATTENTE','CONFIRMEE','PRETE');
+
+CREATE VIEW `vue_creneau_disponible` AS
+SELECT  c.`id`               AS creneau_id,
+        b.`id`               AS banque_id,
+        b.`nom`              AS banque,
+        b.`ville`,
+        c.`date_creneau`,
+        c.`heure_debut`,
+        c.`heure_fin`,
+        c.`lieu`,
+        c.`capacite`,
+        c.`places_reservees`,
+        (c.`capacite` - c.`places_reservees`) AS places_restantes
+FROM `creneau_don` c
+JOIN `banque` b ON b.`id` = c.`banque_id`
+WHERE c.`statut` = 'OUVERT'
+  AND b.`statut` = 'ACTIVE'
+  AND c.`places_reservees` < c.`capacite`;
 
 SET FOREIGN_KEY_CHECKS = 1;
 

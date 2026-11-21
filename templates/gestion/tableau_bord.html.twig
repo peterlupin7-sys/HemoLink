@@ -13,6 +13,7 @@
             <a class="actif" href="{{ path('tableau_bord') }}">Vue d’ensemble</a>
             <a href="{{ path('gestion_stocks') }}">Stocks</a>
             <a href="{{ path('gestion_precommandes') }}">Précommandes</a>
+            <a href="{{ path('gestion_collecte') }}">Collecte</a>
         </nav>
     </header>
 
@@ -36,6 +37,14 @@
         <div class="indicateur {{ peremptions|length > 0 ? 'indicateur-attention' : '' }}">
             <span class="nombre-cle">{{ peremptions|length }}</span>
             <span class="libelle">poche(s) périment sous 7 jours</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ rendez_vous_jour|length }}</span>
+            <span class="libelle">rendez-vous de don aujourd’hui</span>
+        </div>
+        <div class="indicateur {{ dons_a_qualifier|length > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ dons_a_qualifier|length }}</span>
+            <span class="libelle">don(s) en attente de qualification</span>
         </div>
     </section>
 
@@ -110,6 +119,49 @@
             </a>
         </section>
     </div>
+
+    <section class="bloc">
+        <h2>Rendez-vous de don du jour</h2>
+
+        {% if rendez_vous_a_pointer|length > 0 %}
+            <p class="alerte alerte-attention" role="status">
+                {{ rendez_vous_a_pointer|length }} rendez-vous passé(s) n’ont pas été pointés.
+                <a href="{{ path('gestion_collecte') }}">Les traiter</a>.
+            </p>
+        {% endif %}
+
+        {% if rendez_vous_jour is empty %}
+            <p class="vide">Aucun donneur attendu aujourd’hui.</p>
+        {% else %}
+            <table class="tableau">
+                <thead>
+                    <tr>
+                        <th scope="col">Heure</th>
+                        <th scope="col">Donneur</th>
+                        <th scope="col">Référence</th>
+                        <th scope="col">Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rdv in rendez_vous_jour %}
+                        <tr>
+                            <th scope="row">{{ rdv.creneau.horaire }}</th>
+                            <td>{{ rdv.donneur.nomComplet }}</td>
+                            <td><code>{{ rdv.numero }}</code></td>
+                            <td>
+                                <span class="pastille {{ rdv.statut == 'HONORE' ? 'etat-disponible' : 'etat-tension' }}">
+                                    {{ rdv.libelleStatut }}
+                                </span>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a class="bouton bouton-secondaire" href="{{ path('gestion_collecte') }}">
+                Ouvrir la page collecte
+            </a>
+        {% endif %}
+    </section>
 
     <section class="bloc">
         <h2>Derniers mouvements</h2>

@@ -1,0 +1,163 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Mon espace donneur{% endblock %}
+
+{% block corps %}
+    <header class="page-entete">
+        <div>
+            <p class="etiquette">Espace donneur</p>
+            <h1>Bonjour {{ donneur.prenom }}</h1>
+        </div>
+        <nav class="onglets">
+            <a class="actif" href="{{ path('espace_donneur') }}">Mes rendez-vous</a>
+            <a href="{{ path('espace_donneur_creneaux') }}">Prendre rendez-vous</a>
+        </nav>
+    </header>
+
+    <section class="indicateurs">
+        <div class="indicateur">
+            <span class="nombre-cle">{{ donneur.nombreDons }}</span>
+            <span class="libelle">don{{ donneur.nombreDons > 1 ? 's' : '' }} réalisé{{ donneur.nombreDons > 1 ? 's' : '' }}</span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ donneur.groupeSanguin ? donneur.groupeSanguin.code : '—' }}</span>
+            <span class="libelle">{{ donneur.groupeSanguin ? 'votre groupe' : 'groupe connu après analyse' }}</span>
+        </div>
+        <div class="indicateur {{ jours_restants > 0 ? 'indicateur-attention' : '' }}">
+            <span class="nombre-cle">{{ jours_restants > 0 ? jours_restants : 'Oui' }}</span>
+            <span class="libelle">
+                {{ jours_restants > 0 ? 'jour(s) avant le prochain don' : 'vous pouvez donner' }}
+            </span>
+        </div>
+        <div class="indicateur">
+            <span class="nombre-cle">{{ donneur.numeroDonneur }}</span>
+            <span class="libelle">numéro de donneur</span>
+        </div>
+    </section>
+
+    {% if not donneur.apte %}
+        <div class="alerte alerte-erreur" role="status">
+            Votre dossier est en attente d’un avis médical : {{ donneur.motifInaptitude|default('rapprochez-vous de votre banque de sang') }}.
+        </div>
+    {% endif %}
+
+    <section class="bloc">
+        <h2>Rendez-vous à venir</h2>
+
+        {% if rendez_vous_a_venir is empty %}
+            <p class="vide">
+                Aucun rendez-vous prévu.
+                <a href="{{ path('espace_donneur_creneaux') }}">Voir les créneaux disponibles</a>.
+            </p>
+        {% else %}
+            <ul class="liste-cartes">
+                {% for rdv in rendez_vous_a_venir %}
+                    <li class="carte-rdv">
+                        <div>
+                            <p class="carte-rdv-date">
+                                {{ rdv.creneau.dateCreneau|date('l j F Y')|capitalize }}
+                                — {{ rdv.creneau.horaire }}
+                            </p>
+                            <p class="carte-rdv-lieu">
+                                {{ rdv.creneau.banque.nom }}
+                                {% if rdv.creneau.lieu %}· {{ rdv.creneau.lieu }}{% endif %}
+                            </p>
+                            <p class="muet">Référence <code>{{ rdv.numero }}</code></p>
+                        </div>
+
+                        <div class="carte-rdv-actions">
+                            {% if rdv.estModifiable(delai_annulation) %}
+                                <form method="post" action="{{ path('espace_donneur_annuler', {id: rdv.id}) }}"
+                                      onsubmit="return confirm('Annuler ce rendez-vous ? La place sera rendue à un autre donneur.');">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('annuler' ~ rdv.id) }}">
+                                    <button type="submit" class="bouton bouton-texte">Annuler</button>
+                                </form>
+                            {% else %}
+                                <p class="muet">
+                                    Modification close ({{ delai_annulation }} h avant le créneau).
+                                    Appelez le {{ rdv.creneau.banque.telephone|telephone }}.
+                                </p>
+                            {% endif %}
+                        </div>
+                    </li>
+                {% endfor %}
+            </ul>
+
+            <p class="note-accessibilite">
+                Venez avec une pièce d’identité, mangez avant de vous présenter et prévoyez
+                environ 45 minutes sur place.
+            </p>
+        {% endif %}
+    </section>
+
+    <div class="deux-colonnes">
+        <section class="bloc">
+            <h2>Historique de mes rendez-vous</h2>
+            {% if historique is empty %}
+                <p class="vide">Rien pour l’instant.</p>
+            {% else %}
+                <table class="tableau">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">Banque</th>
+                            <th scope="col">Suite donnée</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for rdv in historique %}
+                            <tr>
+                                <th scope="row">{{ rdv.creneau.dateCreneau|date('d/m/Y') }}</th>
+                                <td>{{ rdv.creneau.banque.nom }}</td>
+                                <td>
+                                    <span class="pastille {{ rdv.statut == 'HONORE' ? 'etat-disponible' : (rdv.statut == 'ANNULE' ? 'etat-inconnu' : 'etat-tension') }}">
+                                        {{ rdv.libelleStatut }}
+                                    </span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% endif %}
+        </section>
+
+        <section class="bloc">
+            <h2>Mes dons</h2>
+            {% if dons is empty %}
+                <p class="vide">Votre premier don vous attend.</p>
+            {% else %}
+                <table class="tableau">
+                    <thead>
+                        <tr>
+                            <th scope="col">Date</th>
+                            <th scope="col">Référence</th>
+                            <th scope="col">Suivi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for don in dons %}
+                            <tr>
+                                <th scope="row">{{ don.dateDon|date('d/m/Y') }}</th>
+                                <td><code>{{ don.codeDon }}</code></td>
+                                <td>
+                                    {% if don.statut == 'QUALIFIE' %}
+                                        <span class="pastille etat-disponible">Validé, en réserve</span>
+                                    {% elseif don.statut == 'REJETE' %}
+                                        <span class="pastille etat-inconnu">Contactez la banque</span>
+                                    {% else %}
+                                        <span class="pastille etat-tension">Analyses en cours</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+
+                <p class="note-accessibilite">
+                    Les résultats d’analyses ne sont jamais communiqués par SMS ni affichés
+                    ici : ils vous sont remis lors d’un entretien à la banque de sang.
+                </p>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %}

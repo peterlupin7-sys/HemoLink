@@ -33,7 +33,14 @@ disposent enfin d'un outil de gestion de stock qui tient dans un téléphone.
 | Suivi par numéro et notification SMS | Alertes de péremption et tableau de bord |
 | Groupes de substitution proposés en cas de rupture | Journal des actions et sauvegardes automatisées |
 
-Trois règles de gestion gouvernent tout le reste :
+| Pour les donneurs | Pour le personnel habilité |
+| --- | --- |
+| Créneaux de collecte ouverts, banque par banque | File des dons en attente d'analyses |
+| Prise de rendez-vous en ligne, une place bloquée à la confirmation | Saisie des quatre marqueurs et du groupe confirmé |
+| Annulation ou déplacement, qui rend aussitôt la place | Entrée au stock déclenchée par la seule qualification conforme |
+| Historique de ses dons et rappel SMS la veille | Traçabilité : qui a qualifié quoi, et quand |
+
+Quatre règles de gestion gouvernent tout le reste :
 
 1. **La quantité affichée est comptée, jamais saisie.** `stock.quantite_disponible`
    est le nombre exact de poches à l'état `DISPONIBLE`, et seul `StockService`
@@ -43,7 +50,12 @@ Trois règles de gestion gouvernent tout le reste :
    chiffre dont on ne répond pas n'est pas affiché comme fiable.
 3. **Le numéro de précommande est atomique.** Il est tiré de la table `compteur`
    avec un `SELECT … FOR UPDATE` : deux demandes simultanées ne peuvent pas
-   obtenir le même numéro.
+   obtenir le même numéro. Le même verrou protège la dernière place d'un créneau
+   de collecte.
+4. **Seul un produit qualifié conforme entre au stock.** Un don prélevé n'est pas
+   une poche : tant que le personnel habilité n'a pas rendu les analyses, rien
+   n'est créé. Un produit écarté ne produit aucune poche, donc rien qu'une
+   précommande puisse réserver.
 
 ## Pile technique
 
@@ -108,6 +120,10 @@ Détail de la base, des règles et des requêtes types :
 | Agent CNTS | `agent.cnts@hemolink.bj` | `agent2026` |
 | Agent CNHU-HKM | `agent.cnhu@hemolink.bj` | `agent2026` |
 | Agent CHUD Ouémé | `agent.chud-oueme@hemolink.bj` | `agent2026` |
+| Personnel habilité CNTS | `biologiste.cnts@hemolink.bj` | `hemolink2026` |
+| Personnel habilité CNHU-HKM | `biologiste.cnhu@hemolink.bj` | `hemolink2026` |
+| Donneur (Armand SOSSOU) | `donneur.sossou@hemolink.bj` | `agent2026` |
+| Donneur (Mireille TOGNON) | `donneur.tognon@hemolink.bj` | `agent2026` |
 
 > Ces comptes n'existent que pour la démonstration. Avant toute mise en service,
 > supprimez-les et créez les vrais comptes avec
@@ -121,19 +137,20 @@ hemolink/
 ├── bin/console      point d'entrée des commandes
 ├── config/          configuration Symfony et des paquets
 ├── docs/            cahier des charges, charte graphique, schémas, base
-├── migrations/      schéma initial géré par Doctrine Migrations
+├── migrations/      schéma initial et module don (Doctrine Migrations)
 ├── public/          racine web : index.php, CSS, JS, images, polices, Leaflet
 ├── src/
 │   ├── Command/     tâches planifiées et outils d'exploitation
-│   ├── Controller/  carte, fiche, précommande, suivi, gestion, administration
+│   ├── Controller/  carte, précommande, suivi, gestion, collecte, qualification,
+│   │                 espace donneur, administration
 │   ├── DataFixtures/données de référence et jeu de démonstration
-│   ├── Entity/      13 entités Doctrine
+│   ├── Entity/      18 entités Doctrine
 │   ├── Form/        formulaires de précommande, de banque, de demandeur
 │   ├── Repository/  requêtes métier (Haversine, FIFO péremption, compteurs)
 │   ├── Security/    contrôle d'accès aux précommandes
 │   ├── Service/     géolocalisation, stock, compatibilité, numérotation, SMS
 │   └── Twig/        filtres d'affichage (états, distances, téléphones)
-├── templates/       17 gabarits Twig
+├── templates/       22 gabarits Twig
 └── tests/           tests unitaires PHPUnit
 ```
 
@@ -152,6 +169,13 @@ php bin/console app:sauvegarde --garder=14
 # Créer un compte réel (le mot de passe est demandé, jamais écrit dans l'historique)
 php bin/console app:creer-utilisateur agent@chu.bj AGENT --banque=BQ-COT-001
 
+# Créer un compte de personnel habilité (qualification) ou de donneur
+php bin/console app:creer-utilisateur labo@cnts.bj PERSONNEL --banque=BQ-COT-001
+php bin/console app:creer-utilisateur donneur@exemple.bj DONNEUR
+
+# Rappeler par SMS les donneurs attendus demain (une fois par jour, en fin d'après-midi)
+php bin/console app:rappel-rendez-vous --jours=1
+
 # Vider la file des SMS en attente
 php bin/console messenger:consume async -vv
 ```
@@ -162,6 +186,7 @@ Exemple de planification (crontab) :
 0 * * * *  cd /var/www/hemolink && php bin/console app:expirer-precommandes
 30 6 * * * cd /var/www/hemolink && php bin/console app:alerte-peremption
 0 2 * * *  cd /var/www/hemolink && php bin/console app:sauvegarde --garder=14
+0 17 * * * cd /var/www/hemolink && php bin/console app:rappel-rendez-vous
 ```
 
 ## Tests
@@ -173,7 +198,11 @@ composer test          # ou : vendor/bin/phpunit
 Les tests couvrent ce qui ne doit jamais se tromper : la compatibilité
 transfusionnelle (un rhésus négatif ne reçoit jamais de positif, O− est donneur
 universel, AB+ est receveur universel), le calcul des distances, le calcul des
-états de stock et le cycle de vie d'une précommande.
+états de stock et le cycle de vie d'une précommande. Le module don y ajoute
+l'éligibilité du donneur (délai de récupération, bornes d'âge, inaptitude
+déclarée, un seul rendez-vous à la fois), la disponibilité d'un créneau et la
+lecture des marqueurs infectieux, où un seul résultat positif écarte le
+produit.
 
 ## Accessibilité
 
