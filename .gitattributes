@@ -19,6 +19,10 @@
 *.pptx   binary
 
 # Fichiers exclus des archives « Download ZIP »
+#
+# `tests/` en faisait partie. C'etait une erreur : le README decrit le dossier
+# dans l'arborescence et docs/recette.md renvoie a un fichier de test precis.
+# Qui telechargeait l'archive ne les trouvait pas. La suite de tests fait
+# partie du livrable, elle est donc expedie avec le reste.
 /.github        export-ignore
-/tests          export-ignore
 /.gitattributes export-ignore
