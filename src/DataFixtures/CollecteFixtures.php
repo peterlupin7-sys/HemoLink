@@ -8,9 +8,13 @@ use App\Entity\Don;
 use App\Entity\Donneur;
 use App\Entity\GroupeSanguin;
 use App\Entity\Poche;
+use App\Entity\MouvementStock;
 use App\Entity\Qualification;
 use App\Entity\RendezVousDon;
+use App\Entity\Stock;
+use App\Entity\Compteur;
 use App\Entity\Utilisateur;
+use App\Service\NumerotationService;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -44,6 +48,19 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
      * numéro, nom, prénom, sexe, naissance, téléphone, ville, groupe connu,
      * nombre de dons, email du compte (null = pas de compte en ligne).
      */
+    /** Nombre de poches créées par un don conforme, pour la numérotation. */
+    private int $pochesCreees = 0;
+
+    /** Dernier numéro de rendez-vous attribué. */
+    private int $dernierRdv = 0;
+
+    /** @var array<string, int> dernier numéro de don attribué, par ville */
+    private array $dernierDon = [];
+
+    public function __construct(private readonly NumerotationService $numerotation)
+    {
+    }
+
     private const DONNEURS = [
         ['DN-2026-00001', 'SOSSOU', 'Armand', 'M', '1991-03-14', '+229 97 31 76 20',
             'Cotonou', 'O+', 6, 'donneur.sossou@hemolink.bj'],
@@ -87,6 +104,7 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
         $creneaux = $this->creerCreneaux($manager, $banques, $aujourdhui);
         $rendezVous = $this->creerRendezVous($manager, $donneurs, $creneaux, $maintenant);
         $this->creerDons($manager, $donneurs, $rendezVous, $maintenant);
+        $this->amorcerCompteurs($manager, $rendezVous, $maintenant);
 
         $manager->flush();
     }
@@ -273,15 +291,22 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
         $honores = array_values(array_filter($rendezVous,
             static fn (RendezVousDon $r) => RendezVousDon::HONORE === $r->getStatut()));
 
-        $numero = 0;
-
         foreach ($honores as $index => $rdv) {
             $donneur = $rdv->getDonneur();
             $banque = $rdv->getCreneau()->getBanque();
             $groupe = $donneur->getGroupeSanguin();
 
+            // Premier don : le groupe n'est pas connu à l'accueil, c'est le
+            // laboratoire qui le détermine. On le fixe ici pour que la
+            // qualification puisse rattacher une poche, et on le reporte sur
+            // la fiche du donneur comme le ferait le personnel habilité.
+            if (!$groupe) {
+                $groupe = $this->getReference(ReferenceFixtures::GROUPE.'O+', GroupeSanguin::class);
+                $donneur->setGroupeSanguin($groupe);
+            }
+
             $don = (new Don())
-                ->setCodeDon(sprintf('DON-%s-%04d', $maintenant->format('Y'), ++$numero))
+                ->setCodeDon($this->codeDon($banque, $maintenant))
                 ->setDonneur($donneur)
                 ->setBanque($banque)
                 ->setRendezVous($rdv)
@@ -324,9 +349,12 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
                         ? 'Analyse positive : Hépatite B'
                         : 'Analyse positive : Syphilis');
             } else {
+                // Règle DON-05 : un don conforme entre au stock, donc il porte
+                // toujours une poche. Aucune exception possible, sinon la
+                // traçabilité du produit est rompue.
                 $qualification->setResultat(Qualification::CONFORME);
-                $qualification->setPoche(
-                    $this->pocheLibre($manager, $banque, $groupe, $pochesUtilisees));
+                $qualification->setPoche($this->pocheLibre($manager, $banque, $groupe,
+                    $pochesUtilisees, $don->getDateDon()));
             }
 
             $manager->persist($qualification);
@@ -334,23 +362,71 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
     }
 
     /**
-     * Rattache le don conforme à une poche déjà en stock plutôt que d'en créer
-     * une nouvelle, pour ne pas gonfler artificiellement les quantités.
+     * Code du don, au format exact que produit `DonService` :
+     * DON-{ville}-{annee}-{numero}. La démonstration et l'application doivent
+     * numéroter de la même façon.
+     */
+    private function codeDon(Banque $banque, \DateTimeImmutable $maintenant): string
+    {
+        $ville = $this->numerotation->codeVille($banque);
+        $annee = (int) $maintenant->format('Y');
+        $this->dernierDon[$ville] = ($this->dernierDon[$ville] ?? 0) + 1;
+
+        return sprintf('DON-%s-%d-%04d', $ville, $annee, $this->dernierDon[$ville]);
+    }
+
+    /**
+     * Positionne les compteurs des rendez-vous et des dons sur les derniers
+     * numéros écrits, pour que le premier enregistrement fait depuis
+     * l'application ne heurte pas la contrainte d'unicité.
+     *
+     * @param array<int, RendezVousDon> $rendezVous
+     */
+    private function amorcerCompteurs(ObjectManager $manager, array $rendezVous,
+        \DateTimeImmutable $maintenant): void
+    {
+        $annee = (int) $maintenant->format('Y');
+
+        $manager->persist(
+            (new Compteur())
+                ->setCle(sprintf('RENDEZVOUS-%d', $annee))
+                ->setPrefixe('RDV')
+                ->setAnnee($annee)
+                ->setValeur(\count($rendezVous))
+                ->setDateMaj($maintenant)
+        );
+
+        foreach ($this->dernierDon as $ville => $valeur) {
+            $manager->persist(
+                (new Compteur())
+                    ->setCle(sprintf('DON-%s-%d', $ville, $annee))
+                    ->setPrefixe('DON-'.$ville)
+                    ->setAnnee($annee)
+                    ->setValeur($valeur)
+                    ->setDateMaj($maintenant)
+            );
+        }
+    }
+
+    /**
+     * Fournit la poche du don conforme.
+     *
+     * On réutilise d'abord une poche déjà présente dans le stock de la banque,
+     * pour ne pas gonfler artificiellement les quantités de démonstration. Si
+     * le groupe est rare et qu'aucune poche n'est libre, on en crée une et on
+     * incrémente la ligne de stock : c'est exactement ce que fait
+     * `StockService::enregistrerEntree()` en production.
      *
      * @param array<int, true> $dejaUtilisees
      */
-    private function pocheLibre(ObjectManager $manager, Banque $banque, ?GroupeSanguin $groupe,
-        array &$dejaUtilisees): ?Poche
+    private function pocheLibre(ObjectManager $manager, Banque $banque, GroupeSanguin $groupe,
+        array &$dejaUtilisees, \DateTimeInterface $dateDon): Poche
     {
-        if (!$groupe) {
-            return null;
-        }
-
         $candidates = $manager->getRepository(Poche::class)->findBy([
             'banque' => $banque,
             'groupeSanguin' => $groupe,
             'statut' => Poche::DISPONIBLE,
-        ], ['id' => 'ASC'], 40);
+        ], ['id' => 'ASC'], 80);
 
         foreach ($candidates as $poche) {
             if (!isset($dejaUtilisees[$poche->getId()])) {
@@ -360,7 +436,59 @@ class CollecteFixtures extends Fixture implements DependentFixtureInterface, Fix
             }
         }
 
-        return null;
+        return $this->creerPoche($manager, $banque, $groupe, $dateDon);
+    }
+
+    /**
+     * Crée une poche issue du don et met la ligne de stock à jour.
+     */
+    private function creerPoche(ObjectManager $manager, Banque $banque, GroupeSanguin $groupe,
+        \DateTimeInterface $dateDon): Poche
+    {
+        $prelevement = \DateTimeImmutable::createFromInterface($dateDon);
+
+        $poche = (new Poche())
+            ->setCodePoche(sprintf('%s-D%05d', substr($banque->getCode(), 3, 3),
+                ++$this->pochesCreees))
+            ->setDatePrelevement($prelevement)
+            ->setDatePeremption($prelevement->modify('+42 days'))
+            ->setVolumeMl(450)
+            ->setStatut(Poche::DISPONIBLE)
+            ->setDateCreation($prelevement)
+            ->setBanque($banque)
+            ->setGroupeSanguin($groupe);
+
+        $manager->persist($poche);
+
+        $stock = $manager->getRepository(Stock::class)
+            ->findOneBy(['banque' => $banque, 'groupeSanguin' => $groupe]);
+
+        if ($stock) {
+            $quantite = $stock->getQuantiteDisponible() + 1;
+
+            $stock
+                ->setQuantiteDisponible($quantite)
+                ->setEtat(match (true) {
+                    0 === $quantite => Stock::RUPTURE,
+                    $quantite < 5 => Stock::TENSION,
+                    default => Stock::DISPONIBLE,
+                })
+                ->setDateMaj($prelevement);
+
+            $manager->persist(
+                (new MouvementStock())
+                    ->setType(MouvementStock::ENTREE)
+                    ->setQuantite(1)
+                    ->setQuantiteApres($quantite)
+                    ->setMotif('Poche issue d\'un don qualifié conforme')
+                    ->setDateMouvement($prelevement)
+                    ->setBanque($banque)
+                    ->setGroupeSanguin($groupe)
+                    ->setPoche($poche)
+            );
+        }
+
+        return $poche;
     }
 
     private function biologistePour(Banque $banque): ?Utilisateur

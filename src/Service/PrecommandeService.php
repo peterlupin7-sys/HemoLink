@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Demandeur;
 use App\Entity\Precommande;
 use App\Entity\Utilisateur;
 use Doctrine\ORM\EntityManagerInterface;
@@ -28,6 +29,8 @@ class PrecommandeService
      */
     public function deposer(Precommande $precommande): Precommande
     {
+        $this->rattacherDemandeur($precommande);
+
         $precommande
             ->setNumero($this->numerotation->prochainNumeroPrecommande($precommande->getBanque()))
             ->setStatut(Precommande::EN_ATTENTE)
@@ -41,6 +44,46 @@ class PrecommandeService
             'Précommande '.$precommande->getNumero().' déposée');
 
         return $precommande;
+    }
+
+    /**
+     * Rattache le demandeur saisi dans le formulaire public.
+     *
+     * Le formulaire construit un objet Demandeur neuf, que Doctrine ignore :
+     * sans ce traitement, le depot echouait avec « A new entity was found
+     * through the relationship Precommande#demandeur ».
+     *
+     * Le numero de telephone sert de cle : un hopital qui commande une
+     * deuxieme fois retrouve sa fiche au lieu d'en creer une copie, et son
+     * historique de suivi reste d'un seul tenant. Les coordonnees saisies
+     * ecrasent les anciennes, car ce sont les plus recentes.
+     */
+    private function rattacherDemandeur(Precommande $precommande): void
+    {
+        $saisi = $precommande->getDemandeur();
+
+        if (!$saisi || $saisi->getId()) {
+            return;
+        }
+
+        $connu = $this->em->getRepository(Demandeur::class)
+            ->findOneBy(['telephone' => $saisi->getTelephone()]);
+
+        if (!$connu) {
+            $this->em->persist($saisi);
+
+            return;
+        }
+
+        $connu
+            ->setType($saisi->getType())
+            ->setNom($saisi->getNom())
+            ->setResponsable($saisi->getResponsable())
+            ->setEmail($saisi->getEmail())
+            ->setVille($saisi->getVille())
+            ->setNumeroAgrement($saisi->getNumeroAgrement());
+
+        $precommande->setDemandeur($connu);
     }
 
     /**

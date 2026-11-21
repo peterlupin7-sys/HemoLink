@@ -58,9 +58,13 @@ class CompatibiliteService
      */
     public function substituts(GroupeSanguin $receveur): array
     {
+        // On exclut le groupe demandé lui-même en comparant les codes : ils sont
+        // uniques, alors que l'identifiant est nul tant que l'entité n'a pas été
+        // enregistrée. Comparer les identifiants ferait disparaître tous les
+        // substituts dans ce cas.
         $substituts = array_filter(
             $this->donneursPour($receveur),
-            static fn (GroupeSanguin $g) => $g->getId() !== $receveur->getId()
+            static fn (GroupeSanguin $g) => $g->getCode() !== $receveur->getCode()
         );
 
         usort($substituts, static function (GroupeSanguin $a, GroupeSanguin $b) use ($receveur) {

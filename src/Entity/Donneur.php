@@ -371,7 +371,13 @@ class Donneur
             return 0;
         }
 
-        $reference ??= new \DateTimeImmutable();
+        // Le délai se compte en jours pleins, de minuit à minuit. Sans cette
+        // mise à zéro de l'heure, un donneur consulté en fin de journée voit
+        // « 59 jours » là où il lui en reste 60 : la comparaison mélangerait
+        // une date à minuit et un instant en cours de journée.
+        $reference = new \DateTimeImmutable(
+            ($reference ?? new \DateTimeImmutable())->format('Y-m-d')
+        );
         $prochain = (new \DateTimeImmutable($this->dernierDon->format('Y-m-d')))
             ->modify(sprintf('+%d days', $delaiJours));
 

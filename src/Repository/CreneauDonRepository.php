@@ -31,9 +31,14 @@ class CreneauDonRepository extends ServiceEntityRepository
             ->andWhere('c.placesReservees < c.capacite')
             ->andWhere('c.dateCreneau >= :aujourdhui')
             ->andWhere('c.dateCreneau <= :fin')
+            // Un créneau du jour dont l'heure est passée ne doit plus être
+            // proposé : sinon le donneur voit un bouton « Réserver » qui le
+            // renvoie systématiquement sur « Ce créneau est déjà passé ».
+            ->andWhere('c.dateCreneau > :aujourdhui OR c.heureDebut > :maintenant')
             ->andWhere("b.statut = 'ACTIVE'")
             ->setParameter('ouvert', CreneauDon::OUVERT)
             ->setParameter('aujourdhui', new \DateTimeImmutable('today'))
+            ->setParameter('maintenant', (new \DateTimeImmutable())->format('H:i:s'))
             ->setParameter('fin', (new \DateTimeImmutable('today'))
                 ->modify(sprintf('+%d days', $joursAVenir)))
             ->orderBy('c.dateCreneau', 'ASC')

@@ -40,9 +40,9 @@
                     <th scope="row">{{ utilisateur.nomComplet }}</th>
                     <td>{{ utilisateur.email }}</td>
                     <td>
-                        {% for role in utilisateur.roles if role != 'ROLE_USER' %}
+                        {% for role in utilisateur.roles|filter(r => r != 'ROLE_USER') %}
                             {{ attribute(constant('App\\Entity\\Utilisateur::LIBELLES_ROLES'), role)
-                               |default(role|replace({'ROLE_': ''})|capitalize) }}
+                               |default(role|replace({'ROLE_': ''})|capitalize) }}{% if not loop.last %}, {% endif %}
                         {% endfor %}
                     </td>
                     <td>{{ utilisateur.banque ? utilisateur.banque.nom : 'Niveau national' }}</td>

@@ -49,7 +49,7 @@
                 {% if jour != jour_courant %}
                     {% set jour_courant = jour %}
                     <li class="liste-creneaux-jour">
-                        <h2>{{ creneau.dateCreneau|date('l j F Y')|capitalize }}</h2>
+                        <h2>{{ creneau.dateCreneau|format_date(pattern='EEEE d MMMM y')|capitalize }}</h2>
                     </li>
                 {% endif %}
 

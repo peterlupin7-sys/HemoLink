@@ -1,8 +1,19 @@
 framework:
     validation:
         email_validation_mode: html5
-        auto_mapping:
-            App\Entity\: []
+
+        # Pas de contraintes deduites automatiquement du mapping Doctrine.
+        #
+        # Elles paraissaient gratuites et bloquaient en realite tout le
+        # formulaire public de precommande : le numero est attribue par
+        # NumerotationService apres la validation, et les colonnes DATETIME
+        # reclamaient un \DateTime la ou l'application manipule des
+        # \DateTimeImmutable. Le formulaire revenait alors en erreur avec des
+        # messages anglais incomprehensibles pour le demandeur.
+        #
+        # Les regles metier sont declarees explicitement, en francais, dans les
+        # classes de formulaire (App\Form) : c'est la seule source de verite.
+        auto_mapping: {}
 
 when@test:
     framework:

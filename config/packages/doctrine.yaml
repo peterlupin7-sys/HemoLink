@@ -7,6 +7,12 @@ doctrine:
             collate: utf8mb4_unicode_ci
         profiling_collect_backtrace: '%kernel.debug%'
 
+        # Le schéma SQL de référence utilise des ENUM (statuts, résultats d'analyse).
+        # Doctrine ne connaît pas ce type : on le lui présente comme une chaîne, ce qui
+        # permet à doctrine:schema:validate et au profiler de lire la base sans erreur.
+        mapping_types:
+            enum: string
+
     orm:
         auto_generate_proxy_classes: true
         enable_lazy_ghost_objects: true

@@ -3,6 +3,7 @@
 namespace App\DataFixtures;
 
 use App\Entity\Banque;
+use App\Entity\Compteur;
 use App\Entity\Demandeur;
 use App\Entity\GroupeSanguin;
 use App\Entity\LignePrecommande;
@@ -11,6 +12,7 @@ use App\Entity\NotificationSms;
 use App\Entity\Poche;
 use App\Entity\Precommande;
 use App\Entity\Stock;
+use App\Service\NumerotationService;
 use Doctrine\Bundle\FixturesBundle\Fixture;
 use Doctrine\Bundle\FixturesBundle\FixtureGroupInterface;
 use Doctrine\Common\DataFixtures\DependentFixtureInterface;
@@ -59,6 +61,33 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
         ['GNONLONFOUN Pascal', 'PARTICULIER', null, '+229 96 77 90 42', 'Abomey-Calavi', null],
     ];
 
+    /**
+     * Toutes les poches créées, indexées « codeBanque|groupe », quel que soit
+     * leur statut. Sert à recompter les stocks une fois les réservations faites.
+     *
+     * @var array<string, array<int, Poche>>
+     */
+    private array $toutesPoches = [];
+
+    /** @var array<string, Stock> */
+    private array $lignesStock = [];
+
+    /** @var array<string, bool> le stock de cette banque est-il à jour ? */
+    private array $communique = [];
+
+    /** @var array<string, int> dernier numéro de précommande attribué, par ville */
+    private array $dernierNumero = [];
+
+    /**
+     * Le code ville est demandé au service de numérotation, et non recalculé
+     * ici : une banque de Porto-Novo donne « POR », pas « PNO ». Deux règles
+     * concurrentes produiraient des numéros de démonstration différents de
+     * ceux que l'application attribue ensuite.
+     */
+    public function __construct(private readonly NumerotationService $numerotation)
+    {
+    }
+
     public function load(ObjectManager $manager): void
     {
         mt_srand(self::GRAINE);
@@ -81,6 +110,13 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
         $demandeurs = $this->creerDemandeurs($manager, $maintenant);
 
         $this->creerPrecommandes($manager, $banques, $groupes, $demandeurs, $poches, $maintenant);
+
+        // Les précommandes viennent de réserver et de délivrer des poches : les
+        // lignes de stock doivent être recomptées, sinon la quantité affichée ne
+        // correspond plus aux poches réellement disponibles. C'est la règle de
+        // gestion n°1 du projet, et elle vaut aussi pour les fixtures.
+        $this->recompterStocks($manager, $maintenant);
+        $this->amorcerCompteurs($manager, $maintenant);
 
         $manager->flush();
     }
@@ -136,6 +172,7 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
 
                     $manager->persist($poche);
                     $disponibles[$cle][] = $poche;
+                    $this->toutesPoches[$cle][] = $poche;
                 }
 
                 $quantite = \count($disponibles[$cle]);
@@ -150,6 +187,8 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
                     ->setDateMaj($dateMaj);
 
                 $manager->persist($stock);
+                $this->lignesStock[$cle] = $stock;
+                $this->communique[$cle] = $communique;
 
                 if ($quantite > 0) {
                     $manager->persist(
@@ -167,6 +206,91 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
         }
 
         return $disponibles;
+    }
+
+    /**
+     * Recompte chaque ligne de stock à partir des poches, et trace les
+     * mouvements correspondants.
+     *
+     * Même principe que `StockService::recalculer()` en production : la
+     * quantité n'est jamais saisie, elle est comptée.
+     */
+    private function recompterStocks(ObjectManager $manager, \DateTimeImmutable $maintenant): void
+    {
+        foreach ($this->lignesStock as $cle => $stock) {
+            $disponibles = 0;
+            $reservees = 0;
+            $delivrees = 0;
+
+            foreach ($this->toutesPoches[$cle] ?? [] as $poche) {
+                match ($poche->getStatut()) {
+                    Poche::DISPONIBLE => ++$disponibles,
+                    Poche::RESERVEE => ++$reservees,
+                    Poche::DELIVREE => ++$delivrees,
+                    default => null,
+                };
+            }
+
+            $avant = $stock->getQuantiteDisponible();
+
+            if ($avant === $disponibles && 0 === $reservees) {
+                continue;
+            }
+
+            $stock
+                ->setQuantiteDisponible($disponibles)
+                ->setQuantiteReservee($reservees)
+                ->setEtat($this->etat($disponibles, $this->communique[$cle] ?? true));
+
+            if ($reservees > 0) {
+                $manager->persist(
+                    (new MouvementStock())
+                        ->setType(MouvementStock::RESERVATION)
+                        ->setQuantite(-$reservees)
+                        ->setQuantiteApres($disponibles)
+                        ->setMotif('Poches réservées pour une précommande confirmée')
+                        ->setDateMouvement($maintenant->modify('-6 hours'))
+                        ->setBanque($stock->getBanque())
+                        ->setGroupeSanguin($stock->getGroupeSanguin())
+                );
+            }
+
+            if ($delivrees > 0) {
+                $manager->persist(
+                    (new MouvementStock())
+                        ->setType(MouvementStock::SORTIE)
+                        ->setQuantite(-$delivrees)
+                        ->setQuantiteApres($disponibles)
+                        ->setMotif('Poches remises au demandeur')
+                        ->setDateMouvement($maintenant->modify('-4 hours'))
+                        ->setBanque($stock->getBanque())
+                        ->setGroupeSanguin($stock->getGroupeSanguin())
+                );
+            }
+        }
+    }
+
+    /**
+     * Positionne les compteurs de numérotation sur le dernier numéro écrit.
+     *
+     * Sans cela, la première précommande saisie depuis l'application repart de
+     * 1 et heurte la contrainte d'unicité du numéro. La clé et le préfixe
+     * doivent être exactement ceux que calcule `NumerotationService`.
+     */
+    private function amorcerCompteurs(ObjectManager $manager, \DateTimeImmutable $maintenant): void
+    {
+        $annee = (int) $maintenant->format('Y');
+
+        foreach ($this->dernierNumero as $ville => $valeur) {
+            $manager->persist(
+                (new Compteur())
+                    ->setCle(sprintf('PRECOMMANDE-%s-%d', $ville, $annee))
+                    ->setPrefixe('PRE-'.$ville)
+                    ->setAnnee($annee)
+                    ->setValeur($valeur)
+                    ->setDateMaj($maintenant)
+            );
+        }
     }
 
     private function etat(int $quantite, bool $communique): string
@@ -235,14 +359,16 @@ class DemonstrationFixtures extends Fixture implements DependentFixtureInterface
             ['BQ-BOH-001', 0, Precommande::EXPIREE, 'NORMALE', 96, ['A+' => 2], 'Précommande non retirée dans les délais'],
         ];
 
-        $compteurs = ['COT' => 0, 'PNO' => 0, 'BOH' => 0];
+        $compteurs = [];
         $creees = [];
 
         foreach ($scenarios as [$codeBanque, $indexDemandeur, $statut, $urgence, $heures, $lignes, $motif]) {
             $banque = $banques[$codeBanque];
-            $prefixe = substr($codeBanque, 3, 3);
+            $prefixe = $this->numerotation->codeVille($banque);
+            $compteurs[$prefixe] ??= 0;
             $numero = sprintf('PRE-%s-%d-%05d', $prefixe, (int) $maintenant->format('Y'),
                 ++$compteurs[$prefixe]);
+            $this->dernierNumero[$prefixe] = $compteurs[$prefixe];
 
             $creation = $maintenant->modify(sprintf('-%d hours', $heures));
 

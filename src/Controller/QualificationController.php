@@ -49,6 +49,8 @@ class QualificationController extends AbstractController
     #[Route('/{id}', name: 'qualification_don', methods: ['GET'])]
     public function don(Don $don, GroupeSanguinRepository $groupes): Response
     {
+        $this->verifierBanque($don);
+
         return $this->render('qualification/don.html.twig', [
             'don' => $don,
             'groupes' => $groupes->findBy([], ['code' => 'ASC']),
@@ -63,6 +65,8 @@ class QualificationController extends AbstractController
         DonService $service,
         GroupeSanguinRepository $groupes,
     ): Response {
+        $this->verifierBanque($don);
+
         if (!$this->isCsrfTokenValid('qualifier'.$don->getId(),
             (string) $requete->request->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton invalide.');
@@ -103,5 +107,34 @@ class QualificationController extends AbstractController
         }
 
         return $this->redirectToRoute('qualification');
+    }
+
+    /**
+     * Un biologiste ne qualifie que les dons de sa propre banque.
+     *
+     * La liste filtre déjà par banque, mais l'adresse d'un don reste devinable :
+     * sans ce contrôle, /qualification/63 ouvrait le dossier d'un don prélevé
+     * ailleurs. L'administration nationale, qui n'est rattachée à aucune
+     * banque, conserve l'accès complet.
+     */
+    private function verifierBanque(Don $don): void
+    {
+        /** @var Utilisateur $utilisateur */
+        $utilisateur = $this->getUser();
+        $banque = $utilisateur->getBanque();
+
+        if (!$banque) {
+            if ($this->isGranted('ROLE_ADMIN')) {
+                return;
+            }
+
+            throw $this->createAccessDeniedException(
+                'Votre compte n\'est rattaché à aucune banque de sang.');
+        }
+
+        if ($don->getBanque()?->getId() !== $banque->getId()) {
+            throw $this->createAccessDeniedException(
+                'Ce don a été prélevé dans une autre banque de sang.');
+        }
     }
 }

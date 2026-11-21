@@ -16,6 +16,18 @@
     </p>
 
     {{ form_start(formulaire, {attr: {class: 'formulaire', novalidate: 'novalidate'}}) }}
+        {# Erreurs qui ne portent sur aucun champ precis : jeton de securite
+           expire, session perdue. Sans ce bloc, le formulaire revenait
+           identique et muet, et le demandeur ne pouvait pas comprendre
+           pourquoi sa demande n'etait pas enregistree. #}
+        {% if not formulaire.vars.valid %}
+            <div class="alerte alerte-erreur" role="alert">
+                <p><strong>Votre demande n’a pas pu être enregistrée.</strong>
+                   Corrigez les points signalés ci-dessous, puis renvoyez le formulaire.</p>
+                {{ form_errors(formulaire) }}
+            </div>
+        {% endif %}
+
         <section class="bloc">
             <h2>1. Qui demande ?</h2>
             {{ form_row(formulaire.demandeur.type) }}

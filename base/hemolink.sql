@@ -50,6 +50,7 @@ DROP TABLE IF EXISTS `compatibilite`;
 DROP TABLE IF EXISTS `groupe_sanguin`;
 DROP TABLE IF EXISTS `compteur`;
 DROP TABLE IF EXISTS `parametre`;
+DROP TABLE IF EXISTS `messenger_messages`;
 
 -- ---------------------------------------------------------------------
 -- 1. groupe_sanguin — les 8 groupes du système ABO/Rhésus
@@ -328,6 +329,27 @@ CREATE TABLE `compteur` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
+-- 12 bis. messenger_messages — file d'attente des SMS (Symfony Messenger)
+--
+--  Sans cette table, l'application lève une erreur dès le premier SMS :
+--  SmsNotifier enregistre la notification puis la pousse dans la file.
+--  La structure est celle qu'attend le transport Doctrine de Messenger.
+-- ---------------------------------------------------------------------
+CREATE TABLE `messenger_messages` (
+  `id`           BIGINT NOT NULL AUTO_INCREMENT,
+  `body`         LONGTEXT NOT NULL,
+  `headers`      LONGTEXT NOT NULL,
+  `queue_name`   VARCHAR(190) NOT NULL,
+  `created_at`   DATETIME NOT NULL,
+  `available_at` DATETIME NOT NULL,
+  `delivered_at` DATETIME DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `idx_messenger_queue` (`queue_name`),
+  KEY `idx_messenger_available` (`available_at`),
+  KEY `idx_messenger_delivered` (`delivered_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------
 -- 13. journal — traçabilité des actions sensibles
 -- ---------------------------------------------------------------------
 CREATE TABLE `journal` (
@@ -600,19 +622,22 @@ INSERT INTO `parametre` (`cle`, `valeur`, `libelle`, `type`, `date_maj`) VALUES
   ('delai_stock_obsolete_h', '24', 'Au-delà de ce délai sans mise à jour, le stock est « non communiqué »', 'NOMBRE', '2026-09-01 09:30:00'),
   ('duree_validite_precommande_h', '48', 'Délai avant expiration automatique d’une précommande non retirée', 'NOMBRE', '2026-09-01 09:30:00'),
   ('alerte_peremption_jours', '7', 'Nombre de jours avant péremption déclenchant une alerte', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('duree_conservation_jours', '42', 'Durée de conservation d’un concentré de globules rouges', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('quantite_max_precommande', '10', 'Nombre maximal de poches par précommande', 'NOMBRE', '2026-09-01 09:30:00'),
   ('sms_actif', '1', 'Activation de l’envoi des SMS', 'BOOLEEN', '2026-09-01 09:30:00'),
   ('sms_expediteur', 'HEMOLINK', 'Nom affiché comme expéditeur des SMS', 'TEXTE', '2026-09-01 09:30:00'),
   ('organisation', 'Centre national de transfusion sanguine du Bénin', 'Organisation propriétaire de la plateforme', 'TEXTE', '2026-09-01 09:30:00'),
   ('email_contact', 'contact@hemolink.bj', 'Adresse de contact affichée', 'TEXTE', '2026-09-01 09:30:00'),
   ('telephone_urgence', '+229 21 31 20 40', 'Numéro d’urgence affiché sur la carte', 'TEXTE', '2026-09-01 09:30:00'),
   ('capacite_creneau_defaut', '8', 'Nombre de donneurs accueillis par créneau', 'NOMBRE', '2026-09-01 09:30:00'),
+  ('horizon_creneaux_jours', '30', 'Nombre de jours de créneaux proposés au donneur', 'NOMBRE', '2026-09-01 09:30:00'),
   ('delai_annulation_rdv_h', '12', 'Délai minimal avant le créneau pour annuler ou déplacer un rendez-vous', 'NOMBRE', '2026-09-01 09:30:00'),
   ('delai_entre_dons_jours', '90', 'Intervalle minimal entre deux dons de sang total', 'NOMBRE', '2026-09-01 09:30:00'),
   ('age_min_don', '18', 'Âge minimal pour donner son sang', 'NOMBRE', '2026-09-01 09:30:00'),
   ('age_max_don', '65', 'Âge maximal pour donner son sang', 'NOMBRE', '2026-09-01 09:30:00'),
   ('hemoglobine_min_femme', '12.0', 'Taux d’hémoglobine minimal avant prélèvement, en g/dL (femme)', 'TEXTE', '2026-09-01 09:30:00'),
   ('hemoglobine_min_homme', '13.0', 'Taux d’hémoglobine minimal avant prélèvement, en g/dL (homme)', 'TEXTE', '2026-09-01 09:30:00'),
-  ('version_schema', '1.0', 'Version du schéma de base de données', 'TEXTE', '2026-09-01 09:30:00');
+  ('version_schema', '1.1', 'Version du schéma de base de données', 'TEXTE', '2026-09-01 09:30:00');
 
 
 -- =====================================================================
@@ -623,10 +648,10 @@ INSERT INTO `precommande` (`id`, `numero`, `banque_id`, `demandeur_id`, `utilisa
   (1, 'PRE-COT-2026-00001', 1, 1, 2, 'RETIREE', 'NORMALE', '2026-09-26', 'Programme chirurgical', 'PAT-2026-1001', '2026-09-25 07:30:00', '2026-09-25 09:30:00', '2026-09-26 09:30:00', NULL, NULL),
   (2, 'PRE-COT-2026-00002', 2, 2, 3, 'PRETE', 'URGENTE', '2026-09-30', 'Hémorragie du post-partum', 'PAT-2026-1002', '2026-09-29 03:30:00', '2026-09-29 05:30:00', NULL, NULL, NULL),
   (3, 'PRE-COT-2026-00003', 1, 6, 2, 'CONFIRMEE', 'VITALE', '2026-10-01', 'Accident de la voie publique', 'PAT-2026-1003', '2026-09-30 04:30:00', '2026-09-30 06:30:00', NULL, NULL, NULL),
-  (4, 'PRE-COT-2026-00004', 6, 4, 4, 'CONFIRMEE', 'NORMALE', '2026-10-01', 'Drépanocytose — transfusion', 'PAT-2026-1004', '2026-09-30 08:30:00', '2026-09-30 10:30:00', NULL, NULL, NULL),
-  (5, 'PRE-COT-2026-00005', 2, 3, NULL, 'EN_ATTENTE', 'URGENTE', '2026-10-02', 'Intervention programmée', 'PAT-2026-1005', '2026-10-01 03:30:00', NULL, NULL, NULL, NULL),
-  (6, 'PRE-COT-2026-00006', 8, 5, NULL, 'EN_ATTENTE', 'NORMALE', '2026-10-02', 'Don dirigé familial', 'PAT-2026-1006', '2026-10-01 03:30:00', NULL, NULL, NULL, NULL),
-  (7, 'PRE-COT-2026-00007', 4, 1, NULL, 'ANNULEE', 'NORMALE', '2026-09-28', 'Patient transféré', 'PAT-2026-1007', '2026-09-27 07:30:00', NULL, NULL, '2026-09-27 12:30:00', 'Patient transféré au CNHU');
+  (4, 'PRE-POR-2026-00001', 6, 4, 4, 'CONFIRMEE', 'NORMALE', '2026-10-01', 'Drépanocytose — transfusion', 'PAT-2026-1004', '2026-09-30 08:30:00', '2026-09-30 10:30:00', NULL, NULL, NULL),
+  (5, 'PRE-COT-2026-00004', 2, 3, NULL, 'EN_ATTENTE', 'URGENTE', '2026-10-02', 'Intervention programmée', 'PAT-2026-1005', '2026-10-01 03:30:00', NULL, NULL, NULL, NULL),
+  (6, 'PRE-PAR-2026-00001', 8, 5, NULL, 'EN_ATTENTE', 'NORMALE', '2026-10-02', 'Don dirigé familial', 'PAT-2026-1006', '2026-10-01 03:30:00', NULL, NULL, NULL, NULL),
+  (7, 'PRE-COT-2026-00005', 4, 1, NULL, 'ANNULEE', 'NORMALE', '2026-09-28', 'Patient transféré', 'PAT-2026-1007', '2026-09-27 07:30:00', NULL, NULL, '2026-09-27 12:30:00', 'Patient transféré au CNHU');
 
 INSERT INTO `ligne_precommande` (`id`, `precommande_id`, `groupe_sanguin_id`, `quantite_demandee`, `quantite_confirmee`, `groupe_substitue_id`) VALUES
   (1, 1, 1, 4, 4, NULL),
@@ -1359,7 +1384,7 @@ INSERT INTO `mouvement_stock` (`id`, `banque_id`, `groupe_sanguin_id`, `poche_id
   (2, 2, 2, NULL, 'RESERVATION', -3, 8, 2, 3, 'Précommande PRE-COT-2026-00002', '2026-09-29 05:30:00'),
   (3, 2, 3, NULL, 'RESERVATION', -2, 8, 2, 3, 'Précommande PRE-COT-2026-00002', '2026-09-29 05:30:00'),
   (4, 1, 5, NULL, 'RESERVATION', -5, 16, 3, 2, 'Précommande PRE-COT-2026-00003', '2026-09-30 06:30:00'),
-  (5, 6, 3, NULL, 'RESERVATION', -4, 15, 4, 4, 'Précommande PRE-COT-2026-00004', '2026-09-30 10:30:00'),
+  (5, 6, 3, NULL, 'RESERVATION', -4, 15, 4, 4, 'Précommande PRE-POR-2026-00001', '2026-09-30 10:30:00'),
   (6, 1, 1, NULL, 'ENTREE', 12, 9, NULL, 6, 'Collecte mobile — campagne de don', '2026-09-28 09:30:00'),
   (7, 1, 2, NULL, 'ENTREE', 4, 14, NULL, 6, 'Collecte mobile — campagne de don', '2026-09-28 09:30:00'),
   (8, 2, 3, NULL, 'ENTREE', 8, 8, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-29 09:30:00'),
@@ -1367,26 +1392,26 @@ INSERT INTO `mouvement_stock` (`id`, `banque_id`, `groupe_sanguin_id`, `poche_id
   (10, 8, 5, NULL, 'ENTREE', 6, 5, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-30 09:30:00'),
   (11, 5, 1, NULL, 'ENTREE', 7, 5, NULL, 7, 'Collecte mobile — campagne de don', '2026-09-30 09:30:00'),
   (12, 4, 6, NULL, 'PEREMPTION', -2, 0, NULL, 2, 'Poches périmées — destruction tracée', '2026-09-29 09:30:00'),
-  (13, 1, 1, 7, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0001', '2026-09-25 10:05:00'),
-  (14, 1, 1, 8, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0002', '2026-09-29 10:05:00'),
-  (15, 1, 1, 9, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0003', '2026-09-27 12:05:00'),
-  (16, 1, 1, 12, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0004', '2026-09-25 11:20:00'),
-  (17, 1, 1, 13, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-01-2026-0005', '2026-09-25 12:40:00'),
-  (18, 1, 2, 25, 'ENTREE', 1, 14, NULL, 9, 'Qualification conforme du don DON-01-2026-0006', '2026-09-30 10:20:00'),
-  (19, 2, 1, 109, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-02-2026-0007', '2026-09-27 11:20:00'),
-  (20, 2, 1, 112, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-02-2026-0008', '2026-09-27 13:20:00'),
-  (21, 2, 2, 118, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0009', '2026-09-26 12:20:00'),
-  (22, 2, 2, 121, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0010', '2026-09-26 10:20:00'),
-  (23, 2, 3, 128, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-02-2026-0011', '2026-10-01 13:40:00'),
-  (24, 2, 5, 138, 'ENTREE', 1, 11, NULL, 10, 'Qualification conforme du don DON-02-2026-0012', '2026-09-26 12:05:00');
+  (13, 1, 1, 7, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-COT-2026-0001', '2026-09-25 10:05:00'),
+  (14, 1, 1, 8, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-COT-2026-0002', '2026-09-29 10:05:00'),
+  (15, 1, 1, 9, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-COT-2026-0003', '2026-09-27 12:05:00'),
+  (16, 1, 1, 12, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-COT-2026-0004', '2026-09-25 11:20:00'),
+  (17, 1, 1, 13, 'ENTREE', 1, 9, NULL, 9, 'Qualification conforme du don DON-COT-2026-0005', '2026-09-25 12:40:00'),
+  (18, 1, 2, 25, 'ENTREE', 1, 14, NULL, 9, 'Qualification conforme du don DON-COT-2026-0006', '2026-09-30 10:20:00'),
+  (19, 2, 1, 109, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-COT-2026-0007', '2026-09-27 11:20:00'),
+  (20, 2, 1, 112, 'ENTREE', 1, 13, NULL, 10, 'Qualification conforme du don DON-COT-2026-0008', '2026-09-27 13:20:00'),
+  (21, 2, 2, 118, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-COT-2026-0009', '2026-09-26 12:20:00'),
+  (22, 2, 2, 121, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-COT-2026-0010', '2026-09-26 10:20:00'),
+  (23, 2, 3, 128, 'ENTREE', 1, 8, NULL, 10, 'Qualification conforme du don DON-COT-2026-0011', '2026-10-01 13:40:00'),
+  (24, 2, 5, 138, 'ENTREE', 1, 11, NULL, 10, 'Qualification conforme du don DON-COT-2026-0012', '2026-09-26 12:05:00');
 
 INSERT INTO `notification_sms` (`id`, `destinataire`, `message`, `type`, `precommande_id`, `statut`, `tentatives`, `date_creation`, `date_envoi`, `erreur`) VALUES
   (1, '+229 97 20 30 40', 'HemoLink : votre precommande PRE-COT-2026-00001 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 1, 'ENVOYE', 1, '2026-09-25 09:30:00', '2026-09-25 09:30:12', NULL),
   (2, '+229 96 51 62 73', 'HemoLink : votre precommande PRE-COT-2026-00002 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 2, 'ENVOYE', 1, '2026-09-29 05:30:00', '2026-09-29 05:30:12', NULL),
   (3, '+229 96 51 62 73', 'HemoLink : les poches de la precommande PRE-COT-2026-00002 sont pretes au retrait.', 'RAPPEL', 2, 'ENVOYE', 1, '2026-09-29 06:30:00', '2026-09-29 06:30:09', NULL),
   (4, '+229 21 33 44 55', 'HemoLink : votre precommande PRE-COT-2026-00003 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 3, 'ENVOYE', 1, '2026-09-30 06:30:00', '2026-09-30 06:30:12', NULL),
-  (5, '+229 97 83 94 05', 'HemoLink : votre precommande PRE-COT-2026-00004 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 4, 'ENVOYE', 1, '2026-09-30 10:30:00', '2026-09-30 10:30:12', NULL),
-  (6, '+229 97 20 30 40', 'HemoLink : la precommande PRE-COT-2026-00007 a ete annulee.', 'AUTRE', 7, 'ECHEC', 3, '2026-09-27 12:30:00', NULL, 'Operateur injoignable (timeout 30s)'),
+  (5, '+229 97 83 94 05', 'HemoLink : votre precommande PRE-POR-2026-00001 est confirmee. Retrait sous 48h, presentez ce numero.', 'CONFIRMATION', 4, 'ENVOYE', 1, '2026-09-30 10:30:00', '2026-09-30 10:30:12', NULL),
+  (6, '+229 97 20 30 40', 'HemoLink : la precommande PRE-COT-2026-00005 a ete annulee.', 'AUTRE', 7, 'ECHEC', 3, '2026-09-27 12:30:00', NULL, 'Operateur injoignable (timeout 30s)'),
   (7, '+229 95 77 88 99', 'HemoLink : rupture de B- a CHUD Ouémé-Plateau. Stock a 0 poche, pensez a lancer une collecte.', 'ALERTE_RUPTURE', NULL, 'ENVOYE', 1, '2026-10-01 06:30:00', '2026-10-01 06:30:07', NULL),
   (8, '+229 97 31 76 20', 'HemoLink : rendez-vous de don RDV-2026-00017 le 05/10/2026 a 08:00 - CNTS. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-09-26 09:00:00', '2026-09-26 09:00:08', NULL),
   (9, '+229 96 44 08 15', 'HemoLink : rendez-vous de don RDV-2026-00018 le 07/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-02 09:00:00', '2026-10-02 09:00:08', NULL),
@@ -1395,8 +1420,12 @@ INSERT INTO `notification_sms` (`id`, `destinataire`, `message`, `type`, `precom
   (12, '+229 97 45 83 06', 'HemoLink : rendez-vous de don RDV-2026-00021 le 12/10/2026 a 08:00 - CNHU-HKM. Venez avec une piece d identite.', 'RAPPEL', NULL, 'ENVOYE', 1, '2026-10-08 09:00:00', '2026-10-08 09:00:08', NULL);
 
 INSERT INTO `compteur` (`cle`, `prefixe`, `annee`, `valeur`, `date_maj`) VALUES
-  ('PRECOMMANDE-COT-2026', 'PRE-COT', 2026, 7, '2026-10-01 09:30:00'),
-  ('POCHE-2026', 'PO', 2026, 604, '2026-10-01 09:30:00');
+  ('PRECOMMANDE-COT-2026', 'PRE-COT', 2026, 5, '2026-10-01 09:30:00'),
+  ('PRECOMMANDE-PAR-2026', 'PRE-PAR', 2026, 1, '2026-10-01 09:30:00'),
+  ('PRECOMMANDE-POR-2026', 'PRE-POR', 2026, 1, '2026-10-01 09:30:00'),
+  ('POCHE-2026', 'PO', 2026, 604, '2026-10-01 09:30:00'),
+  ('RENDEZVOUS-2026', 'RDV', 2026, 23, '2026-10-01 09:30:00'),
+  ('DON-COT-2026', 'DON-COT', 2026, 16, '2026-10-01 09:30:00');
 
 INSERT INTO `journal` (`id`, `utilisateur_id`, `action`, `entite`, `entite_id`, `details`, `adresse_ip`, `date_action`) VALUES
   (1, 1, 'CONNEXION', 'Utilisateur', 1, 'Connexion administrateur', '41.79.12.84', '2026-10-01 07:30:00'),
@@ -1405,8 +1434,8 @@ INSERT INTO `journal` (`id`, `utilisateur_id`, `action`, `entite`, `entite_id`, 
   (4, 2, 'CREATION', 'Utilisateur', 6, 'Création du compte agent.cnts@hemolink.bj', '41.79.12.84', '2026-09-26 09:30:00'),
   (5, NULL, 'PRECOMMANDE', 'Precommande', 6, 'Précommande PRE-COT-2026-00006 déposée depuis le site public', '197.234.221.17', '2026-10-01 04:30:00'),
   (6, 1, 'SAUVEGARDE', 'Systeme', NULL, 'Sauvegarde quotidienne : hemolink_2026-09-30.sql', '127.0.0.1', '2026-10-01 00:30:00'),
-  (7, 9, 'QUALIFICATION', 'Don', 13, 'Don DON-01-2026-0013 declare non conforme : aucune poche mise en stock', '41.79.12.91', '2026-09-27 12:30:00'),
-  (8, 10, 'QUALIFICATION', 'Don', 14, 'Don DON-02-2026-0014 declare non conforme : aucune poche mise en stock', '41.79.12.92', '2026-09-29 12:30:00'),
+  (7, 9, 'QUALIFICATION', 'Don', 13, 'Don DON-COT-2026-0013 declare non conforme : aucune poche mise en stock', '41.79.12.91', '2026-09-27 12:30:00'),
+  (8, 10, 'QUALIFICATION', 'Don', 14, 'Don DON-COT-2026-0014 declare non conforme : aucune poche mise en stock', '41.79.12.92', '2026-09-29 12:30:00'),
   (9, 9, 'QUALIFICATION', 'Don', 1, '12 produits qualifies conformes et mis en stock', '41.79.12.91', '2026-10-01 03:30:00');
 
 
@@ -1671,22 +1700,22 @@ INSERT INTO `rendez_vous_don` (`id`, `numero`, `donneur_id`, `creneau_id`, `stat
   (23, 'RDV-2026-00023', 4, 61, 'ABSENT', NULL, '2026-09-23 09:00:00', NULL);
 
 INSERT INTO `don` (`id`, `code_don`, `donneur_id`, `banque_id`, `rendez_vous_id`, `groupe_sanguin_id`, `date_don`, `volume_ml`, `hemoglobine`, `statut`, `utilisateur_id`, `observation`, `date_creation`) VALUES
-  (1, 'DON-01-2026-0001', 1, 1, 1, 1, '2026-09-24 08:05:00', 450, 14.5, 'QUALIFIE', 6, NULL, '2026-09-24 08:05:00'),
-  (2, 'DON-01-2026-0002', 1, 1, 2, 1, '2026-09-28 08:05:00', 450, 15.7, 'QUALIFIE', 6, NULL, '2026-09-28 08:05:00'),
-  (3, 'DON-01-2026-0003', 1, 1, 3, 1, '2026-09-26 10:05:00', 250, 13.1, 'QUALIFIE', 6, NULL, '2026-09-26 10:05:00'),
-  (4, 'DON-01-2026-0004', 1, 1, 4, 1, '2026-09-24 09:20:00', 350, 12.6, 'QUALIFIE', 6, NULL, '2026-09-24 09:20:00'),
-  (5, 'DON-01-2026-0005', 1, 1, 5, 1, '2026-09-24 10:40:00', 450, 12.7, 'QUALIFIE', 6, NULL, '2026-09-24 10:40:00'),
-  (6, 'DON-01-2026-0006', 4, 1, 6, 2, '2026-09-29 08:20:00', 350, 15.0, 'QUALIFIE', 6, NULL, '2026-09-29 08:20:00'),
-  (7, 'DON-02-2026-0007', 1, 2, 7, 1, '2026-09-26 09:20:00', 450, 12.7, 'QUALIFIE', 7, NULL, '2026-09-26 09:20:00'),
-  (8, 'DON-02-2026-0008', 1, 2, 8, 1, '2026-09-26 11:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-26 11:20:00'),
-  (9, 'DON-02-2026-0009', 4, 2, 9, 2, '2026-09-25 10:20:00', 350, 12.5, 'QUALIFIE', 7, NULL, '2026-09-25 10:20:00'),
-  (10, 'DON-02-2026-0010', 4, 2, 10, 2, '2026-09-25 08:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-25 08:20:00'),
-  (11, 'DON-02-2026-0011', 2, 2, 11, 3, '2026-09-30 11:40:00', 450, 14.8, 'QUALIFIE', 7, NULL, '2026-09-30 11:40:00'),
-  (12, 'DON-02-2026-0012', 3, 2, 12, 5, '2026-09-25 10:05:00', 250, 16.0, 'QUALIFIE', 7, NULL, '2026-09-25 10:05:00'),
-  (13, 'DON-01-2026-0013', 3, 1, 13, NULL, '2026-09-26 09:30:00', 450, 13.9, 'REJETE', 6, 'Produit ecarte apres analyses', '2026-09-26 09:30:00'),
-  (14, 'DON-02-2026-0014', 5, 2, 14, NULL, '2026-09-28 09:30:00', 450, 13.2, 'REJETE', 7, 'Produit ecarte apres analyses', '2026-09-28 09:30:00'),
-  (15, 'DON-01-2026-0015', 8, 1, 15, 1, '2026-09-30 10:10:00', 450, 15.0, 'EN_QUALIFICATION', 6, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00'),
-  (16, 'DON-02-2026-0016', 7, 2, 16, NULL, '2026-09-30 10:10:00', 450, 12.9, 'EN_QUALIFICATION', 7, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00');
+  (1, 'DON-COT-2026-0001', 1, 1, 1, 1, '2026-09-24 08:05:00', 450, 14.5, 'QUALIFIE', 6, NULL, '2026-09-24 08:05:00'),
+  (2, 'DON-COT-2026-0002', 1, 1, 2, 1, '2026-09-28 08:05:00', 450, 15.7, 'QUALIFIE', 6, NULL, '2026-09-28 08:05:00'),
+  (3, 'DON-COT-2026-0003', 1, 1, 3, 1, '2026-09-26 10:05:00', 250, 13.1, 'QUALIFIE', 6, NULL, '2026-09-26 10:05:00'),
+  (4, 'DON-COT-2026-0004', 1, 1, 4, 1, '2026-09-24 09:20:00', 350, 12.6, 'QUALIFIE', 6, NULL, '2026-09-24 09:20:00'),
+  (5, 'DON-COT-2026-0005', 1, 1, 5, 1, '2026-09-24 10:40:00', 450, 12.7, 'QUALIFIE', 6, NULL, '2026-09-24 10:40:00'),
+  (6, 'DON-COT-2026-0006', 4, 1, 6, 2, '2026-09-29 08:20:00', 350, 15.0, 'QUALIFIE', 6, NULL, '2026-09-29 08:20:00'),
+  (7, 'DON-COT-2026-0007', 1, 2, 7, 1, '2026-09-26 09:20:00', 450, 12.7, 'QUALIFIE', 7, NULL, '2026-09-26 09:20:00'),
+  (8, 'DON-COT-2026-0008', 1, 2, 8, 1, '2026-09-26 11:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-26 11:20:00'),
+  (9, 'DON-COT-2026-0009', 4, 2, 9, 2, '2026-09-25 10:20:00', 350, 12.5, 'QUALIFIE', 7, NULL, '2026-09-25 10:20:00'),
+  (10, 'DON-COT-2026-0010', 4, 2, 10, 2, '2026-09-25 08:20:00', 250, 13.1, 'QUALIFIE', 7, NULL, '2026-09-25 08:20:00'),
+  (11, 'DON-COT-2026-0011', 2, 2, 11, 3, '2026-09-30 11:40:00', 450, 14.8, 'QUALIFIE', 7, NULL, '2026-09-30 11:40:00'),
+  (12, 'DON-COT-2026-0012', 3, 2, 12, 5, '2026-09-25 10:05:00', 250, 16.0, 'QUALIFIE', 7, NULL, '2026-09-25 10:05:00'),
+  (13, 'DON-COT-2026-0013', 3, 1, 13, NULL, '2026-09-26 09:30:00', 450, 13.9, 'REJETE', 6, 'Produit ecarte apres analyses', '2026-09-26 09:30:00'),
+  (14, 'DON-COT-2026-0014', 5, 2, 14, NULL, '2026-09-28 09:30:00', 450, 13.2, 'REJETE', 7, 'Produit ecarte apres analyses', '2026-09-28 09:30:00'),
+  (15, 'DON-COT-2026-0015', 8, 1, 15, 1, '2026-09-30 10:10:00', 450, 15.0, 'EN_QUALIFICATION', 6, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00'),
+  (16, 'DON-COT-2026-0016', 7, 2, 16, NULL, '2026-09-30 10:10:00', 450, 12.9, 'EN_QUALIFICATION', 7, 'Echantillons transmis au laboratoire', '2026-09-30 10:10:00');
 
 INSERT INTO `qualification` (`id`, `don_id`, `poche_id`, `personnel_id`, `groupe_sanguin_id`, `resultat`, `vih`, `hepatite_b`, `hepatite_c`, `syphilis`, `motif_rejet`, `date_qualification`) VALUES
   (1, 1, 7, 9, 1, 'CONFORME', 'NEGATIF', 'NEGATIF', 'NEGATIF', 'NEGATIF', NULL, '2026-09-25 10:05:00'),

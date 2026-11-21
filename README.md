@@ -78,6 +78,11 @@ filtrée affiche la même chose qu'un poste de bureau.
 - Composer 2
 - MySQL 8 ou MariaDB 10.4 (XAMPP, WAMP, Laragon ou un serveur dédié)
 
+L'installation ci-dessous a été déroulée entièrement sur PHP 8.4.28, Composer
+2.11 et MariaDB 11.8 : migrations, fixtures, suite de tests et parcours
+utilisateur. Les numéros de version indiqués sont donc des minimums, pas des
+versions exactes à respecter.
+
 ### En cinq commandes
 
 ```bash
@@ -93,6 +98,16 @@ symfony serve                # ou : php -S 0.0.0.0:8000 -t public
 
 L'application répond alors sur <http://localhost:8000>.
 
+Exemple de `DATABASE_URL` pour un serveur local :
+
+```dotenv
+DATABASE_URL="mysql://hemolink:hemolink@127.0.0.1:3306/hemolink?serverVersion=11.8.9-MariaDB&charset=utf8mb4"
+```
+
+La valeur de `serverVersion` doit correspondre à votre serveur
+(`SELECT VERSION();` vous la donne). Pour MySQL 8, écrivez par exemple
+`serverVersion=8.0.36`.
+
 ### Variante phpMyAdmin / XAMPP
 
 Si vous préférez partir de la base déjà remplie plutôt que des migrations :
@@ -101,8 +116,12 @@ Si vous préférez partir de la base déjà remplie plutôt que des migrations :
 2. Ouvrez <http://localhost/phpmyadmin>, onglet **Importer**.
 3. Choisissez `base/hemolink.sql`, puis **Exécuter**.
 
-Le script crée la base, les 14 tables, les 2 vues et un jeu de démonstration
-complet (12 banques, 604 poches, 7 précommandes). Il commence par supprimer une
+Le script crée la base, les 20 tables, les 3 vues et un jeu de démonstration
+complet (12 banques, 604 poches, 7 précommandes, 8 donneurs, 216 créneaux,
+23 rendez-vous, 16 dons et 14 qualifications). Il positionne aussi les
+compteurs de numérotation sur les derniers numéros écrits : la première
+précommande, le premier rendez-vous et le premier don saisis depuis
+l'application prennent la suite sans heurter l'unicité des numéros. Il commence par supprimer une
 éventuelle base `hemolink` existante : ne le lancez pas sur des données réelles.
 
 Détail de la base, des règles et des requêtes types :
@@ -194,6 +213,19 @@ Exemple de planification (crontab) :
 ```bash
 composer test          # ou : vendor/bin/phpunit
 ```
+
+Quatre tests parcourent l'application réelle (connexion, pages, codes HTTP) et
+ont besoin de la base de test. Préparez-la une fois :
+
+```bash
+php bin/console doctrine:migrations:migrate -e test --no-interaction
+php bin/console doctrine:fixtures:load -e test --no-interaction
+```
+
+Doctrine ajoute lui-même le suffixe `_test` au nom de la base : `.env.test`
+pointe donc sur `hemolink`, et c'est `hemolink_test` qui est utilisée.
+
+Dernière exécution complète : **61 tests, 186 assertions, aucun échec**.
 
 Les tests couvrent ce qui ne doit jamais se tromper : la compatibilité
 transfusionnelle (un rhésus négatif ne reçoit jamais de positif, O− est donneur

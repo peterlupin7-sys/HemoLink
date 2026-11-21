@@ -4,6 +4,12 @@ framework:
     http_method_override: false
     handle_all_throwables: true
 
+    # L'application est francophone et exploitee au Benin. Sans ce reglage,
+    # les dates ecrites en toutes lettres sortaient en anglais
+    # (« Saturday 21 november 2026 ») sur l'espace donneur.
+    default_locale: fr
+    enabled_locales: ['fr']
+
     session:
         handler_id: null
         cookie_secure: auto

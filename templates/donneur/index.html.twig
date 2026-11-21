@@ -55,7 +55,7 @@
                     <li class="carte-rdv">
                         <div>
                             <p class="carte-rdv-date">
-                                {{ rdv.creneau.dateCreneau|date('l j F Y')|capitalize }}
+                                {{ rdv.creneau.dateCreneau|format_date(pattern='EEEE d MMMM y')|capitalize }}
                                 — {{ rdv.creneau.horaire }}
                             </p>
                             <p class="carte-rdv-lieu">
