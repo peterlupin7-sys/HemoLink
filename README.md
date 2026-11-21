@@ -224,7 +224,7 @@ pour passer sur n'importe quel terminal.
 
 | Document | Fichier |
 | --- | --- |
-| Cahier des charges v1.0 (32 pages) | `docs/Cahier_des_charges_HemoLink_v1.0.pdf` |
+| Cahier des charges v1.1 (34 pages, module don inclus) | `docs/Cahier_des_charges_HemoLink_v1.0.pdf` |
 | Charte graphique « Pouls » v2.0 | `docs/Charte_graphique_HemoLink.pdf` |
 | Présentation de l'identité visuelle | `docs/Presentation_Identite_HemoLink.pdf` |
 | Base de données (tables, règles, requêtes) | `docs/base_de_donnees.md` |
