@@ -6,6 +6,7 @@ use App\Entity\CreneauDon;
 use App\Entity\Donneur;
 use App\Entity\RendezVousDon;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\ParametreRepository;
 use App\Repository\RendezVousDonRepository;
 use Doctrine\DBAL\LockMode;
@@ -51,23 +52,23 @@ class RendezVousService
                 LockMode::PESSIMISTIC_WRITE);
 
             if (!$verrouille) {
-                throw new \RuntimeException('Ce créneau n’existe plus.');
+                throw new RegleMetier('Ce créneau n’existe plus.');
             }
 
             if (CreneauDon::OUVERT !== $verrouille->getStatut()) {
-                throw new \RuntimeException('Ce créneau n’est plus ouvert à la réservation.');
+                throw new RegleMetier('Ce créneau n’est plus ouvert à la réservation.');
             }
 
             if ($verrouille->estPasse()) {
-                throw new \RuntimeException('Ce créneau est déjà passé.');
+                throw new RegleMetier('Ce créneau est déjà passé.');
             }
 
             if ($verrouille->getPlacesRestantes() < 1) {
-                throw new \RuntimeException('Ce créneau est complet : choisissez-en un autre.');
+                throw new RegleMetier('Ce créneau est complet : choisissez-en un autre.');
             }
 
             if ($this->dejaInscrit($verrouille, $donneur)) {
-                throw new \RuntimeException('Vous avez déjà un rendez-vous sur ce créneau.');
+                throw new RegleMetier('Vous avez déjà un rendez-vous sur ce créneau.');
             }
 
             $numero = $this->prochainNumero();
@@ -90,7 +91,13 @@ class RendezVousService
             $this->em->flush();
             $connexion->commit();
         } catch (\Throwable $e) {
-            $connexion->rollBack();
+            // Une panne grave (interblocage, lien coupé) peut avoir déjà défait
+            // la transaction côté serveur. Appeler `rollBack()` sans vérifier
+            // lève alors « There is no active transaction », qui remplace la
+            // cause réelle et rend l'incident indéchiffrable dans les journaux.
+            if ($connexion->isTransactionActive()) {
+                $connexion->rollBack();
+            }
 
             throw $e;
         }
@@ -120,7 +127,7 @@ class RendezVousService
         $delai = $this->parametres->entier('delai_annulation_rdv_h', 12);
 
         if (!$rendezVous->estModifiable($delai) && null === $auteur) {
-            throw new \RuntimeException(sprintf(
+            throw new RegleMetier(sprintf(
                 'Un rendez-vous ne peut plus être annulé moins de %d heures avant le créneau. '
                 .'Appelez la banque.', $delai));
         }
@@ -151,7 +158,7 @@ class RendezVousService
         $delai = $this->parametres->entier('delai_annulation_rdv_h', 12);
 
         if (!$rendezVous->estModifiable($delai)) {
-            throw new \RuntimeException(sprintf(
+            throw new RegleMetier(sprintf(
                 'Ce rendez-vous ne peut plus être déplacé à moins de %d heures du créneau.',
                 $delai));
         }
@@ -203,7 +210,7 @@ class RendezVousService
     public function verifierEligibilite(Donneur $donneur): void
     {
         if (!$donneur->isApte()) {
-            throw new \RuntimeException($donneur->getMotifInaptitude()
+            throw new RegleMetier($donneur->getMotifInaptitude()
                 ?? 'Vous ne pouvez pas donner votre sang actuellement. '
                    .'Rapprochez-vous de la banque.');
         }
@@ -213,7 +220,7 @@ class RendezVousService
         $age = $donneur->getAge();
 
         if ($age < $ageMin || $age > $ageMax) {
-            throw new \RuntimeException(sprintf(
+            throw new RegleMetier(sprintf(
                 'Le don du sang est réservé aux personnes de %d à %d ans.', $ageMin, $ageMax));
         }
 
@@ -221,13 +228,13 @@ class RendezVousService
         $jours = $donneur->joursAvantProchainDon($delai);
 
         if ($jours > 0) {
-            throw new \RuntimeException(sprintf(
+            throw new RegleMetier(sprintf(
                 'Votre dernier don est trop récent : vous pourrez redonner dans %d jour%s.',
                 $jours, $jours > 1 ? 's' : ''));
         }
 
         if ($this->rendezVous->compterActifsPour($donneur) >= 1) {
-            throw new \RuntimeException('Vous avez déjà un rendez-vous à venir. '
+            throw new RegleMetier('Vous avez déjà un rendez-vous à venir. '
                 .'Annulez-le ou déplacez-le avant d’en prendre un autre.');
         }
     }

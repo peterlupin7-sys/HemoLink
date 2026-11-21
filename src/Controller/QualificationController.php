@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Don;
 use App\Entity\Qualification;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\DonRepository;
 use App\Repository\GroupeSanguinRepository;
 use App\Repository\QualificationRepository;
@@ -88,7 +89,7 @@ class QualificationController extends AbstractController
 
         try {
             $qualification = $service->qualifier($don, $personnel, $resultats, $groupe, $motif);
-        } catch (\RuntimeException $e) {
+        } catch (RegleMetier $e) {
             $this->addFlash('erreur', $e->getMessage());
 
             return $this->redirectToRoute('qualification');

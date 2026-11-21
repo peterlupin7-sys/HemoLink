@@ -6,6 +6,7 @@ use App\Entity\CreneauDon;
 use App\Entity\Donneur;
 use App\Entity\RendezVousDon;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\BanqueRepository;
 use App\Repository\CreneauDonRepository;
 use App\Repository\DonneurRepository;
@@ -76,7 +77,7 @@ class EspaceDonneurController extends AbstractController
 
         try {
             $service->verifierEligibilite($donneur);
-        } catch (\RuntimeException $e) {
+        } catch (RegleMetier $e) {
             $blocage = $e->getMessage();
         }
 
@@ -111,7 +112,7 @@ class EspaceDonneurController extends AbstractController
                 $rendezVous->getNumero(),
                 $creneau->getDateCreneau()->format('d/m/Y'),
                 substr($creneau->getHeureDebut(), 0, 5)));
-        } catch (\RuntimeException $e) {
+        } catch (RegleMetier $e) {
             $this->addFlash('erreur', $e->getMessage());
 
             return $this->redirectToRoute('espace_donneur_creneaux');
@@ -138,7 +139,7 @@ class EspaceDonneurController extends AbstractController
             $service->annuler($rendezVous, 'Annulé par le donneur');
             $this->addFlash('succes', 'Votre rendez-vous est annulé. '
                 .'La place est rendue à un autre donneur.');
-        } catch (\RuntimeException $e) {
+        } catch (RegleMetier $e) {
             $this->addFlash('erreur', $e->getMessage());
         }
 
@@ -174,7 +175,7 @@ class EspaceDonneurController extends AbstractController
                 $remplacant->getNumero(),
                 $nouveau->getDateCreneau()->format('d/m/Y'),
                 substr($nouveau->getHeureDebut(), 0, 5)));
-        } catch (\RuntimeException $e) {
+        } catch (RegleMetier $e) {
             $this->addFlash('erreur', $e->getMessage());
         }
 

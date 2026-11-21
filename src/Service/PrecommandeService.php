@@ -5,6 +5,7 @@ namespace App\Service;
 use App\Entity\Demandeur;
 use App\Entity\Precommande;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use Doctrine\ORM\EntityManagerInterface;
 
 /**
@@ -94,7 +95,7 @@ class PrecommandeService
     public function confirmer(Precommande $precommande, ?Utilisateur $agent = null): Precommande
     {
         if (Precommande::EN_ATTENTE !== $precommande->getStatut()) {
-            throw new \LogicException('Seule une précommande en attente peut être confirmée.');
+            throw new RegleMetier('Seule une précommande en attente peut être confirmée.');
         }
 
         foreach ($precommande->getLignes() as $ligne) {
@@ -122,7 +123,7 @@ class PrecommandeService
     public function marquerPrete(Precommande $precommande, ?Utilisateur $agent = null): Precommande
     {
         if (Precommande::CONFIRMEE !== $precommande->getStatut()) {
-            throw new \LogicException('Seule une précommande confirmée peut être déclarée prête.');
+            throw new RegleMetier('Seule une précommande confirmée peut être déclarée prête.');
         }
 
         $precommande->setStatut(Precommande::PRETE)->setUtilisateurTraitant($agent);
@@ -138,7 +139,7 @@ class PrecommandeService
     public function retirer(Precommande $precommande, ?Utilisateur $agent = null): Precommande
     {
         if (!\in_array($precommande->getStatut(), [Precommande::CONFIRMEE, Precommande::PRETE], true)) {
-            throw new \LogicException('Cette précommande ne peut pas être retirée.');
+            throw new RegleMetier('Cette précommande ne peut pas être retirée.');
         }
 
         $this->stocks->delivrer($precommande, $agent);
@@ -159,7 +160,7 @@ class PrecommandeService
     public function annuler(Precommande $precommande, string $raison, ?Utilisateur $agent = null): Precommande
     {
         if (Precommande::RETIREE === $precommande->getStatut()) {
-            throw new \LogicException('Une précommande retirée ne peut plus être annulée.');
+            throw new RegleMetier('Une précommande retirée ne peut plus être annulée.');
         }
 
         $this->stocks->liberer($precommande, $agent);

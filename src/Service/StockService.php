@@ -9,6 +9,7 @@ use App\Entity\Poche;
 use App\Entity\Precommande;
 use App\Entity\Stock;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\ParametreRepository;
 use App\Repository\PocheRepository;
 use App\Repository\StockRepository;
@@ -156,7 +157,7 @@ class StockService
         $disponibles = $this->poches->disponibles($banque->getId(), $groupe->getId(), $quantite);
 
         if (\count($disponibles) < $quantite) {
-            throw new \RuntimeException(sprintf(
+            throw new RegleMetier(sprintf(
                 'Stock insuffisant : %d poche(s) de %s disponible(s) sur %d demandée(s).',
                 \count($disponibles), $groupe->getCode(), $quantite
             ));

@@ -10,6 +10,7 @@ use App\Entity\Poche;
 use App\Entity\Qualification;
 use App\Entity\RendezVousDon;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\ParametreRepository;
 use Doctrine\ORM\EntityManagerInterface;
 
@@ -103,12 +104,12 @@ class DonService
         ?string $motifRejet = null,
     ): Qualification {
         if (!$don->estQualifiable()) {
-            throw new \RuntimeException('Ce don a déjà été qualifié.');
+            throw new RegleMetier('Ce don a déjà été qualifié.');
         }
 
         if (!\in_array(Utilisateur::ROLE_PERSONNEL, $personnel->getRoles(), true)
             && !\in_array(Utilisateur::ROLE_ADMIN, $personnel->getRoles(), true)) {
-            throw new \RuntimeException(
+            throw new RegleMetier(
                 'Seul un personnel habilité peut qualifier un produit sanguin.');
         }
 

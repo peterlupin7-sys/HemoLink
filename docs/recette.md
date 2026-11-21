@@ -5,9 +5,10 @@ une machine réelle : installation des dépendances, création de la base,
 chargement des données, suite de tests et parcours utilisateur menés à la main.
 
 Jusque-là, le code avait été relu et vérifié syntaxiquement, mais jamais lancé.
-Dix défauts sont apparus dès les premières minutes d'exécution. Ils sont listés
-ici sans rien retrancher, parce qu'ils disent quelque chose d'utile sur ce
-qu'une relecture ne peut pas voir.
+Dix défauts sont apparus dès les premières minutes d'exécution. Deux autres,
+plus profonds, n'ont été révélés qu'en lançant plusieurs réservations au même
+instant. Les douze sont listés ici sans rien retrancher, parce qu'ils disent
+quelque chose d'utile sur ce qu'une relecture ne peut pas voir.
 
 ## Environnement
 
@@ -34,7 +35,7 @@ utf8mb4 / `utf8mb4_unicode_ci`.
 7. Les cinq commandes `app:*`.
 8. Les parcours des cinq rôles, à travers un serveur HTTP réel.
 
-## Les dix défauts trouvés, et leur correction
+## Les douze défauts trouvés, et leur correction
 
 ### 1. Le formulaire public de précommande ne pouvait jamais aboutir
 
@@ -129,12 +130,120 @@ Invisibles sans exécution, puisqu'elles ne se voient qu'une fois les données
 La table `messenger_messages` manquait également au schéma : le premier SMS
 aurait planté en production.
 
+### 11. Deux réservations simultanées sur deux créneaux différents s'empêchaient
+
+Les dix premiers défauts ont été trouvés en utilisant l'application une action
+après l'autre. Restait une question sans réponse : que se passe-t-il quand
+plusieurs donneurs cliquent au même instant ? Une banque qui ouvre ses créneaux
+du mois à 8 h connaît exactement cette situation.
+
+Le dispositif : dix processus lancés en parallèle, chacun réservant une place,
+tous synchronisés sur un horodatage commun pour qu'ils se disputent réellement
+la ressource. Sans cette synchronisation, les processus se sérialisent et le
+test ne prouve rien.
+
+Trois campagnes, dont les deux premières rassurantes :
+
+| Campagne | Dispositif | Résultat |
+|---|---|---|
+| 1 | un créneau de **3 places**, 10 concurrents | 3 réservations, 7 refus clairs, aucun surbooking |
+| 2 | un créneau d'**1 place**, 10 concurrents | 1 réservation, 9 refus, la dernière place n'a pas été vendue deux fois |
+| 3 | **10 créneaux différents**, 10 concurrents | **5 échecs sur 10** |
+
+La troisième campagne est celle qui compte. Les donneurs ne se disputaient plus
+rien : dix créneaux distincts, dix places libres. Pourtant la moitié des
+tentatives échouait, et le donneur recevait ceci à l'écran :
+
+```
+SQLSTATE[HY000]: General error: 1020 Record has changed since last read
+in table 'compteur'
+```
+
+La ligne `compteur`, qui attribue les numéros de rendez-vous, est traversée par
+**toutes** les réservations, quel que soit le créneau. C'était le véritable
+point de contention, et il était invisible tant qu'on testait une seule
+ressource partagée.
+
+La correction a demandé trois tentatives, chacune instructive :
+
+1. le service ouvrait sa propre transaction, imbriquée dans celle de
+   `RendezVousService::reserver()`. Un `rollBack()` interne condamnait la
+   transaction externe tout entière. **Une transaction ne s'ouvre pas dans un
+   service appelé par un service qui en a déjà ouvert une** ;
+2. il lisait ensuite la ligne avec `SELECT ... FOR UPDATE` avant d'ajouter un.
+   Sous MariaDB en REPEATABLE READ, toucher une ligne qu'une autre transaction
+   a modifiée et validée depuis le début de la nôtre lève l'erreur 1020.
+   Remplacer la lecture par un incrément atomique
+   (`UPDATE compteur SET valeur = LAST_INSERT_ID(valeur + 1)`) était
+   nécessaire, mais pas suffisant ;
+3. tant que cette instruction s'exécutait **dans** la transaction de
+   l'appelant, elle restait prisonnière de l'instantané ouvert quelques
+   millisecondes plus tôt, et l'erreur revenait.
+
+Le compteur vit désormais sur une **connexion qui lui est propre**, hors de
+toute transaction métier : chaque incrément est une instruction isolée, validée
+immédiatement, avec son propre instantané. Contrepartie assumée et documentée :
+un numéro attribué à une réservation qui échoue ensuite n'est pas rendu, et la
+série peut comporter un trou. C'est le comportement de n'importe quelle
+séquence, et il vaut mieux qu'un trou que deux donneurs portant le même numéro.
+
+Après correction, la troisième campagne donne **10 réservations sur 10**,
+numéros uniques et consécutifs, et les deux premières restent inchangées
+(3 sur 3, 1 sur 1, aucun surbooking).
+
+### 12. Une erreur technique s'affichait au donneur comme un refus métier
+
+Le message SQL brut ci-dessus n'aurait jamais dû sortir de l'application. S'il
+est arrivé jusqu'à l'écran, c'est pour une raison que la relecture ne pouvait
+pas voir : **`Doctrine\DBAL\Exception` hérite de `\RuntimeException`**.
+
+Les contrôleurs écrivaient :
+
+```php
+catch (\RuntimeException $e) {
+    $this->addFlash('erreur', $e->getMessage());
+}
+```
+
+L'intention était d'attraper les refus métier — « ce créneau est complet »,
+« vous avez déjà un rendez-vous » — et de les afficher tels quels. Mais ce
+`catch` ramassait aussi les pannes techniques et les présentait au donneur avec
+la même mise en forme qu'une règle de gestion.
+
+Une classe dédiée, `App\Exception\RegleMetier`, sépare désormais les deux
+familles. Les dix-neuf `throw` métier des quatre services l'utilisent, et les
+six `catch` des contrôleurs ne retiennent plus qu'elle. Toute anomalie
+technique repart en page d'erreur, où elle est journalisée au lieu d'être
+maquillée en règle de gestion.
+
+Un troisième point est apparu au passage, plus discret et plus pernicieux :
+`RendezVousService` appelait `rollBack()` sans vérifier qu'une transaction
+était encore ouverte. Quand la base avait déjà défait la transaction de son
+côté, ce `rollBack()` levait « There is no active transaction », **remplaçant
+la cause réelle** dans les journaux. Pendant un temps, l'erreur affichée n'avait
+plus aucun rapport avec le problème. Le `rollBack()` est maintenant conditionné
+à `isTransactionActive()`.
+
+### Un test qui aurait attrapé les trois
+
+`tests/Service/CompteurSousContentionTest.php` (5 tests) rejoue ces situations
+sans avoir besoin de dix processus : il ouvre une transaction comme le fait
+`reserver()`, fait modifier le compteur par une autre connexion pendant ce
+temps, et vérifie que l'incrément passe, que la transaction de l'appelant
+survit, et qu'aucun numéro n'est attribué deux fois.
+
 ## Ce que la vérification manuelle avait laissé passer
 
 Les contrôles faits sans exécuter — `php -l`, relecture des signatures,
-équilibrage des balises Twig — n'ont attrapé aucun de ces dix défauts. Ils
+équilibrage des balises Twig — n'ont attrapé aucun de ces douze défauts. Ils
 portaient tous sur le comportement : une configuration qui bloque, une requête
 qui ne filtre pas assez, un objet jamais persisté, un contrôle d'accès absent.
+
+Les défauts 11 et 12 vont plus loin encore : ils ne se voient ni à la relecture,
+ni en utilisant l'application normalement. Il a fallu la mettre sous charge
+pour qu'ils apparaissent — et surtout, il a fallu la mettre sous **la bonne**
+charge. Les deux premières campagnes, pourtant menées sur la ressource qui
+semblait la plus disputée, concluaient que tout allait bien.
 
 Trois outils auraient suffi à en détecter une bonne partie avant tout
 lancement : `lint:twig` (défaut 8), `lint:container`, et surtout le chargement
@@ -154,6 +263,9 @@ des fixtures, qui a révélé à lui seul les défauts 5, 10 et une partie du 1.
 | Qualification non conforme (VIH+) | Don `REJETE`, stock et nombre de poches inchangés |
 | Cloisonnement entre banques | 403 sur la consultation comme sur le prononcé |
 | Cloisonnement entre rôles | Donneur et biologiste refusés sur `/gestion/collecte` |
+| 10 réservations simultanées, 1 créneau de 3 places | 3 acceptées, 7 refusées, aucun surbooking |
+| 10 réservations simultanées, 1 créneau d'1 place | 1 acceptée, 9 refusées |
+| 10 réservations simultanées, 10 créneaux distincts | 10 acceptées, numéros uniques et consécutifs |
 
 La règle DON-05 — aucune poche au stock sans qualification conforme — a été
 vérifiée dans les deux sens, sur des données réelles.

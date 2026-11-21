@@ -225,7 +225,12 @@ php bin/console doctrine:fixtures:load -e test --no-interaction
 Doctrine ajoute lui-même le suffixe `_test` au nom de la base : `.env.test`
 pointe donc sur `hemolink`, et c'est `hemolink_test` qui est utilisée.
 
-Dernière exécution complète : **61 tests, 186 assertions, aucun échec**.
+Dernière exécution complète : **66 tests, 198 assertions, aucun échec**.
+
+Cinq de ces tests portent sur le compteur de numéros sous accès concurrent.
+Ils sont nés d'une campagne de charge — dix réservations lancées au même
+instant — qui a révélé deux défauts invisibles à l'usage normal. Le compte
+rendu complet est dans `docs/recette.md`.
 
 Les tests couvrent ce qui ne doit jamais se tromper : la compatibilité
 transfusionnelle (un rhésus négatif ne reçoit jamais de positif, O− est donneur

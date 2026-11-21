@@ -4,6 +4,7 @@ namespace App\Controller\Gestion;
 
 use App\Entity\Precommande;
 use App\Entity\Utilisateur;
+use App\Exception\RegleMetier;
 use App\Repository\PrecommandeRepository;
 use App\Service\PrecommandeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -83,7 +84,7 @@ class PrecommandeGestionController extends AbstractController
 
             $this->addFlash('succes', sprintf('Précommande %s : %s.',
                 $precommande->getNumero(), strtolower($precommande->getLibelleStatut())));
-        } catch (\RuntimeException|\LogicException $e) {
+        } catch (RegleMetier $e) {
             $this->addFlash('erreur', $e->getMessage());
         }
 
